@@ -41,7 +41,7 @@ extern "C" {
 #include <bl702_hbn.h>
 #include <bl_sys.h>
 #include <bl_irq.h>
-// #include <bl_sec.h>
+#include <bl_sec.h>
 #include <bl_rtc.h>
 #include <bl_timer.h>
 #include <bl_psram.h>
@@ -60,7 +60,6 @@ using namespace ::chip::DeviceLayer;
 #define UNUSED_PARAMETER(a) (a = a)
 
 volatile int apperror_cnt;
-extern "C" int bl_sec_init(void);
 // ================================================================================
 // App Error
 //=================================================================================

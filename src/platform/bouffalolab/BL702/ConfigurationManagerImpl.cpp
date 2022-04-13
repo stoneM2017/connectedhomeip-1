@@ -59,6 +59,8 @@ CHIP_ERROR ConfigurationManagerImpl::Init()
     bool failSafeArmed;
     uint32_t bootCount = 0;
 
+    err = Internal::GenericConfigurationManagerImpl<BL702Config>::Init();
+
     BL_RST_REASON_E bootCause = bl_sys_rstinfo_get();
     mBootReason = to_underlying(BootReasonType::kUnspecified);
     if (BL_RST_POR == bootCause) {

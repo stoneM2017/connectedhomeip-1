@@ -24,6 +24,8 @@
 #include <app-common/zap-generated/attribute-id.h>
 #include <app-common/zap-generated/attribute-type.h>
 #include <app-common/zap-generated/cluster-id.h>
+#include <app/clusters/identify-server/identify-server.h>
+#include <app/clusters/on-off-server/on-off-server.h>
 #include <app/server/OnboardingCodesUtil.h>
 #include <app/server/Server.h>
 #include <app/util/attribute-storage.h>
@@ -72,15 +74,8 @@ extern "C" {
 
 namespace {
 
-#if BL70X_IoT_DVK
-
 LEDWidget sStatusLED;
 ColorLEDWidget sLightLED;
-
-#elif BOARD_3R_V2Hub || BL70X_LIGHT
-ColorLEDWidget sLightLED;
-uint8_t is_powerup_default = 0xff;
-#endif
 uint8_t is_powerup_indicated = 0;
 
 } // namespace
@@ -115,11 +110,9 @@ void PlatformManagerImpl::PlatformInit(void)
         ChipLogError(NotSpecified, "PlatformMgr().InitChipStack() failed"); 
         appError(ret);
     }
-    PlatformMgr().AddEventHandler(GetAppTask().ChipEventHandler);
 
-    chip::DeviceLayer::ConnectivityMgr().SetBLEDeviceName("BL706_LIGHT");
+    chip::DeviceLayer::ConnectivityMgr().SetBLEDeviceName("BL702_LIGHT");
 
-#if CHIP_ENABLE_OPENTHREAD
     ot_radioInit();
 #if CONFIG_ENABLE_CHIP_SHELL
     cmd_otcli_init();
@@ -143,6 +136,17 @@ void PlatformManagerImpl::PlatformInit(void)
         appError(ret);
     }
 
+    chip::DeviceLayer::PlatformMgr().LockChipStack();
+
+    // Initialize device attestation config
+    SetDeviceAttestationCredentialsProvider(Examples::GetExampleDACProvider());
+
+    // Init ZCL Data Model
+    static chip::CommonCaseDeviceServerInitParams initParams;
+    (void) initParams.InitializeStaticResourcesBeforeServerInit();
+    chip::Server::GetInstance().Init(initParams);
+    chip::DeviceLayer::PlatformMgr().UnlockChipStack();
+
     ChipLogProgress(NotSpecified, "Starting OpenThread task");
     // Start OpenThread task
     ret = ThreadStackMgrImpl().StartThreadTask();
@@ -151,27 +155,10 @@ void PlatformManagerImpl::PlatformInit(void)
         ChipLogError(NotSpecified, "ThreadStackMgr().StartThreadTask() failed"); 
         appError(ret);
     }
-#endif // CHIP_ENABLE_OPENTHREAD
-
-    chip::DeviceLayer::PlatformMgr().LockChipStack();
-    // Initialize device attestation config
-    SetDeviceAttestationCredentialsProvider(Examples::GetExampleDACProvider());
-    chip::DeviceLayer::PlatformMgr().UnlockChipStack();
-
-    ChipLogProgress(NotSpecified, "Current Firmware Version: %s", CHIP_DEVICE_CONFIG_DEVICE_FIRMWARE_REVISION_STRING);
 
     ConfigurationMgr().LogDeviceConfig();
 
     PrintOnboardingCodes(chip::RendezvousInformationFlag(chip::RendezvousInformationFlag::kBLE));
-
-#if !BL70X_LIGHT
-    GetAppTask().sTimer = xTimerCreate("lightTmr", pdMS_TO_TICKS(1000), false, NULL, AppTask::TimerCallback);
-    if (GetAppTask().sTimer == NULL)
-    {
-        ChipLogError(NotSpecified, "Failed to create timer task");
-        appError(APP_ERROR_EVENT_QUEUE_FAILED);
-    }
-#endif
 
     GetAppTask().PostEvent(AppTask::APP_EVENT_STARTED);
     vTaskResume(GetAppTask().sAppTaskHandle);
@@ -211,65 +198,6 @@ CHIP_ERROR AppTask::StartAppShellTask()
 }
 #endif
 
-#if BL70X_LIGHT || BOARD_3R_V2Hub
-uint32_t AppTask::AppRebootCheck(uint32_t time)
-{
-    static uint32_t starttime           = 0;
-    uint32_t now                        = 
-        (uint32_t)(chip::System::SystemClock().GetMonotonicMicroseconds64().count() / 1000);
-    uint32_t i_boot_times = 0;
-    constexpr const char *preboot_key = "boot_times";
-    size_t readsize = 0;
-
-    if (time) {
-        if (starttime == 0) {
-            starttime = time + FACTORY_RESET_TRIGGER_TIMEOUT;
-
-            ef_get_env_blob(preboot_key, (uint8_t *)&i_boot_times, sizeof(i_boot_times), &readsize);
-            if (!readsize) {
-                i_boot_times = APP_REBOOT_RESET_COUNT;
-            }
-
-            if(i_boot_times > 1) {
-                /* boot count -1 */
-                i_boot_times --;
-                ef_set_env_blob(preboot_key, (uint8_t *)&i_boot_times, sizeof(i_boot_times));
-
-                return starttime - time;
-            }
-            else {
-
-                starttime = 0;
-                /** post event to do factory reset */
-                i_boot_times = APP_REBOOT_RESET_COUNT;
-                ef_set_env_blob(preboot_key, (uint8_t *)&i_boot_times, sizeof(i_boot_times));
-
-                GetAppTask().PostEvent(APP_EVENT_FACTORY_RESET);
-                return 0;
-            }
-        }
-    }
-    else {
-        if (starttime) {
-            if (starttime > now) {
-                /** other events invoke this call */
-                return starttime - now;
-            }
-            else {
-                /** restore reboot times to default value */
-                i_boot_times = APP_REBOOT_RESET_COUNT;
-                ef_set_env_blob(preboot_key, (uint8_t *)&i_boot_times, sizeof(i_boot_times));
-
-                /** cancel the reboot times */
-                starttime = 0;
-            }
-        }
-    }
-
-    return portMAX_DELAY;
-}
-#endif
-
 void AppTask::PostEvent(app_event_t event)
 {
     if (xPortIsInsideInterrupt()) {
@@ -293,16 +221,18 @@ void AppTask::AppTaskMain(void * pvParameter)
         ChipLogError(NotSpecified, "PlatformMgr().StartEventLoopTask() failed");
         appError(ret);
     }
-
     vTaskSuspend(NULL);
 
-#if  BL70X_IoT_DVK
+    GetAppTask().sTimer = xTimerCreate("lightTmr", pdMS_TO_TICKS(1000), false, NULL, AppTask::TimerCallback);
+    if (GetAppTask().sTimer == NULL)
+    {
+        ChipLogError(NotSpecified, "Failed to create timer task");
+        appError(APP_ERROR_EVENT_QUEUE_FAILED);
+    }
+
     sStatusLED.Init();
-#endif
-#if BOARD_3R_V2Hub || BL70X_IoT_DVK
-    ButtonInit();
-#endif
     sLightLED.Init();
+    ButtonInit();
 
     ChipLogProgress(NotSpecified, "App Task started, with heap %d left\r\n", xPortGetFreeHeapSize());
 
@@ -310,90 +240,35 @@ void AppTask::AppTaskMain(void * pvParameter)
     {
         appEvent = APP_EVENT_NONE;
         BaseType_t eventReceived = xTaskNotifyWait( 0, APP_EVENT_ALL_MASK, (uint32_t *)&appEvent, taskDelay);
+
         if (eventReceived) {
+            PlatformMgr().LockChipStack();
             if (APP_EVENT_STARTED & appEvent) {
-#if BL70X_LIGHT || BOARD_3R_V2Hub
 
-                taskDelay = AppRebootCheck(chip::System::SystemClock().GetMonotonicMicroseconds64().count() / 1000);
-                if (0xff == is_powerup_default) {
-                    PlatformMgr().LockChipStack();
-                    is_powerup_default = !(ConnectivityMgr().IsThreadProvisioned() && ConnectivityMgr().IsThreadEnabled());
-                    is_powerup_default = is_powerup_default && !ConnectivityMgr().IsWiFiStationProvisioned();
-                    PlatformMgr().UnlockChipStack();
-                }
-
-                if (taskDelay && false == is_powerup_indicated) {
-                    is_powerup_indicated = true;
-                    if (0 == is_powerup_default) {
-                        /** power up with thread configured, turn on the light */
-                        ChipLogError(NotSpecified, "AppTask Provisioned");
-                        UpdateCluster_LightOnoff(true);
-                    }
-                    else {
-                        /** power up without thread configured, blink white light 500ms */
-                        ChipLogError(NotSpecified, "AppTask Not Provisioned"); 
-                        sLightLED.SetColor(254, 0, 0);
-                        vTaskDelay(500);
-                        UpdateCluster_LightOnoff(false);
-                    }
-                }
-#else
                 UpdateCluster_LightOnoff(true);
-#endif
             }
 
             if (APP_EVENT_LIGHTING_MASK & appEvent) {
                 UpdateLighting((app_event_t)(APP_EVENT_LIGHTING_MASK & appEvent));
             }
 
-#if BL70X_IoT_DVK || BOARD_3R_V2Hub
-            if (APP_EVENT_TIMER & appEvent) {
-                TimerEventHandler();
-            }
-#endif
-
             if (APP_EVENT_SYS_ALL_MASK & appEvent) {
-#if BL70X_LIGHT || BOARD_3R_V2Hub
-                if (APP_EVENT_FACTORY_RESET & appEvent) {
-                    /** Factory reset to default, blink yellow light 500ms */
-                    ChipLogError(NotSpecified, "AppTask Do Factory Reset"); 
-                    sLightLED.SetColor(254, 42, 254);
-                    vTaskDelay(500);
-                    DeviceLayer::ConfigurationMgr().InitiateFactoryReset();
-                }
-                else {
-                    if (appEvent & APP_EVENT_SYS_PROVISIONED) {
-                        if (is_powerup_default) {
-                            /** commissioned to CHIP fabric, blink green light 500ms */
-                            ChipLogProgress(NotSpecified, "Commissioned to CHIP Fabric\r\n");
-                            is_powerup_default = false;
-                            sLightLED.SetColor(254, 84, 254);
-                            vTaskDelay(500);
-                            UpdateCluster_LightOnoff(false);
-                        }
-                    }
-                }
-#else
+
                 if (APP_EVENT_FACTORY_RESET & appEvent) {
                     DeviceLayer::ConfigurationMgr().InitiateFactoryReset();
                 }
                 else {
                     UpdateCluster_LightOnoff(true);
                 }
-#endif
             }
+            PlatformMgr().UnlockChipStack();
         }
 
-#if BL70X_LIGHT || BOARD_3R_V2Hub
-        taskDelay = AppRebootCheck();
-#endif
-#if !BL70X_LIGHT
         TimerDutyCycle(appEvent);
         if (0 == is_powerup_indicated) {
             is_powerup_indicated = StartTimer();
             ChipLogProgress(NotSpecified, "Starimter call\r\n"); 
         }
-#endif
     }
 }
 
@@ -466,11 +341,7 @@ void AppTask::UpdateLighting(app_event_t event)
             sLightLED.SetLevel(0);
         }
         else {
-#if BL70X_LIGHT || BOARD_3R_V2Hub
-            sLightLED.SetColor(v, h, s);
-#else
             sLightLED.SetLevel(v);
-#endif
         }
         ChipLogProgress(NotSpecified, "UpdateLighting (%d), onoff %d, level %d, hue %d, sta %d",
             endpoint, onoff, v, h, s);
@@ -484,24 +355,19 @@ void AppTask::UpdateCluster_LightOnoff(uint8_t bonoff)
     EndpointId endpoint = GetAppTask().GetEndpointId();
 
     // write the new on/off value
-    emberAfWriteAttribute(endpoint, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, CLUSTER_MASK_SERVER,
-                                                 (uint8_t *) &newValue, ZCL_BOOLEAN_ATTRIBUTE_TYPE);
-    newValue = 254;
-    emberAfWriteAttribute(endpoint, ZCL_LEVEL_CONTROL_CLUSTER_ID, ZCL_CURRENT_LEVEL_ATTRIBUTE_ID, CLUSTER_MASK_SERVER,
-                                                 (uint8_t *) &newValue, ZCL_INT8U_ATTRIBUTE_TYPE);
+    EmberAfStatus status = OnOffServer::Instance().setOnOffValue(endpoint, newValue, false);
+
+    if (status != EMBER_ZCL_STATUS_SUCCESS) {
+        ChipLogError(NotSpecified, "ERR: updating on/off %x", status);
+    }
 }
 
-#if !BL70X_LIGHT
 bool AppTask::StartTimer(void)
 {
-#if BOARD_3R_V2Hub
-    uint32_t aTimeoutMs = GetAppTask().mBlinkOnTimeMS;
-#else
     uint32_t aTimeoutMs = sStatusLED.GetOnoff() ? GetAppTask().mBlinkOnTimeMS : GetAppTask().mBlinkOffTimeMS;
     if (!aTimeoutMs) {
         return false;
     }
-#endif
 
     if (xTimerIsTimerActive(GetAppTask().sTimer)) {
         CancelTimer();
@@ -541,26 +407,8 @@ void AppTask::TimerEventHandler(void)
         }
     }
 
-#if !BOARD_3R_V2Hub
     sStatusLED.Toggle();
     StartTimer();
-#endif
-    
-#if  BL70X_IoT_DVK | BOARD_3R_V2Hub
-    static uint64_t     heap_show_timeout = 0;
-    if (heap_show_timeout < chip::System::SystemClock().GetMonotonicMilliseconds64().count()) {
-        heap_show_timeout = chip::System::SystemClock().GetMonotonicMilliseconds64().count() + 10 * 1000;
-
-#ifdef CFG_USE_PSRAM
-        ChipLogProgress(NotSpecified, "SRAM heap has %d/%d left, PSRAM heap has %d/%d left\r\n", 
-            xPortGetFreeHeapSize(), xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSizePsram(), xPortGetMinimumEverFreeHeapSizePsram());
-#else
-        ChipLogProgress(NotSpecified, "SRAM heap has %d/%d left\r\n", xPortGetFreeHeapSize(), xPortGetMinimumEverFreeHeapSize());
-#endif
-    }
-
-#endif
-
 }
 
 void AppTask::TimerDutyCycle(app_event_t event)
@@ -578,10 +426,6 @@ void AppTask::TimerDutyCycle(app_event_t event)
     }
     else if (event & APP_EVENT_BTN_FACTORY_RESET) {
         GetAppTask().mBlinkOnTimeMS = 500, GetAppTask().mBlinkOffTimeMS = 500;
-#if BOARD_3R_V2Hub
-        GetAppTask().mBlinkOnTimeMS = FACTORY_RESET_TRIGGER_TIMEOUT;
-        StartTimer();
-#endif
         return;
     }
     else if (event & APP_EVENT_BTN_FACTORY_RESET_CANCEL) {
@@ -590,9 +434,6 @@ void AppTask::TimerDutyCycle(app_event_t event)
 
     backup_blinkOnTimeMS = GetAppTask().mBlinkOnTimeMS, backup_blinkOffTimeMS = GetAppTask().mBlinkOffTimeMS;
 }
-
-
-#if CHIP_ENABLE_OPENTHREAD
 
 hosal_gpio_dev_t gpio_key = {
     .port = LED_BTN_RESET,
@@ -623,33 +464,3 @@ void AppTask::ButtonEventHandler(void * arg)
         GetAppTask().buttonPressedTimeout = chip::System::SystemClock().GetMonotonicMilliseconds64().count() + FACTORY_RESET_TRIGGER_TIMEOUT - 100;
     }
 }
-
-#else
-void AppTask::ButtonInit(void)
-{
-    GetAppTask().buttonPressedTimeout = 0;
-
-    bl_gpio_enable_input(LED_BTN_RESET, 1, 0);
-    hal_gpio_register_handler((void *)GetAppTask().ButtonEventHandler, LED_BTN_RESET,
-                              (int)GPIO_INT_CONTROL_ASYNC, (int)GPIO_INT_TRIG_NEG_PULSE, NULL);
-}
-
-bool AppTask::ButtonPressed(void)
-{
-    return !bl_gpio_input_get_value(LED_BTN_RESET);
-}
-
-void AppTask::ButtonEventHandler(void * arg)
-{
-    bl_gpio_int_clear(LED_BTN_RESET, 1);
-    bl_gpio_int_clear(LED_BTN_RESET, 0);
-
-    if (ButtonPressed()) {
-        GetAppTask().PostEvent(APP_EVENT_BTN_FACTORY_RESET);
-        GetAppTask().buttonPressedTimeout = chip::System::SystemClock().GetMonotonicMilliseconds64().count() + FACTORY_RESET_TRIGGER_TIMEOUT - 100;
-    }
-}
-
-#endif
-
-#endif
