@@ -12,23 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build_overrides/build.gni")
+# add this gni as import in your build args to use pigweed in the example
+# 'import("//with_pw_rpc.gni")'
 
-import("${build_root}/toolchain/gcc_toolchain.gni")
+import("//build_overrides/chip.gni")
+import("${chip_root}/config/bl702/lib/pw_rpc/pw_rpc.gni")
+import("${chip_root}/examples/platform/bouffalolab/bl702/args.gni")
 
-template("riscv_toolchain") {
-  gcc_toolchain(target_name) {
-    _tool_name_root = "riscv64-unknown-elf-"
-    ar = _tool_name_root + "ar"
-    cc = _tool_name_root + "gcc"
-    cxx = _tool_name_root + "g++"
+bl702_sdk_target = get_label_info(":sdk", "label_no_toolchain")
 
-    toolchain_args = {
-      current_cpu = "riscv"
-      current_os = invoker.current_os
-      is_clang = false
+chip_enable_pw_rpc = true
 
-      forward_variables_from(invoker.toolchain_args, "*")
-    }
-  }
-}
+cpp_standard = "gnu++17"

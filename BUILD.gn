@@ -195,6 +195,9 @@ if (current_toolchain != "${dir_pw_toolchain}/default:default") {
 
     # Set this to true to enable bl602 builds by default.
     enable_bl602_builds = false
+
+    # Set this to true to enable bl702 builds by default.
+    enable_bl702_builds = false
   }
 
   declare_args() {
@@ -280,6 +283,9 @@ if (current_toolchain != "${dir_pw_toolchain}/default:default") {
     # Build the bl602 lighting app example.
     enable_bl602_lighting_app_build = enable_bl602_builds
 
+    # Build the bl702 lighting app example.
+    enable_bl702_lighting_app_build = enable_bl702_builds
+    
     enable_fake_tests = enable_default_builds && host_os == "linux"
   }
 
@@ -457,6 +463,12 @@ if (current_toolchain != "${dir_pw_toolchain}/default:default") {
   if (enable_k32w_shell_app_build) {
     group("k32w_shell_app") {
       deps = [ "${chip_root}/examples/shell/nxp/k32w/k32w0/(${chip_root}/config/k32w/toolchain:k32w_shell_app)" ]
+    }
+  }
+
+  if (enable_bl702_lighting_app_build) {
+    group("bl702_lighting_app") {
+      deps = [ "${chip_root}/examples/lighting-app/bl702(${chip_root}/config/bl702/toolchain:bl702_lighting_app)" ]
     }
   }
 

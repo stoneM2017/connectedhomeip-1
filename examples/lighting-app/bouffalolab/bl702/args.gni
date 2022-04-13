@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Project CHIP Authors
+# Copyright (c) 2020 Project CHIP Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build_overrides/build.gni")
+import("//build_overrides/chip.gni")
+import("//build_overrides/pigweed.gni")
+import("${chip_root}/src/platform/bouffalolab/BL702/args.gni")
 
-import("${build_root}/toolchain/gcc_toolchain.gni")
+bl702_sdk_target = get_label_info(":sdk", "label_no_toolchain")
 
-template("riscv_toolchain") {
-  gcc_toolchain(target_name) {
-    _tool_name_root = "riscv64-unknown-elf-"
-    ar = _tool_name_root + "ar"
-    cc = _tool_name_root + "gcc"
-    cxx = _tool_name_root + "g++"
+pw_log_BACKEND = "${chip_root}/src/lib/support/pw_log_chip"
+pw_assert_BACKEND = "$dir_pw_assert_log"
 
-    toolchain_args = {
-      current_cpu = "riscv"
-      current_os = invoker.current_os
-      is_clang = false
-
-      forward_variables_from(invoker.toolchain_args, "*")
-    }
-  }
-}
+chip_enable_ble             = true
+chip_enable_openthread      = true
+chip_openthread_ftd         = true
+chip_enable_wifi            = false
+lwip_platform               = "bl702"

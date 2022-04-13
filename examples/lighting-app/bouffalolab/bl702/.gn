@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Project CHIP Authors
+# Copyright (c) 2020 Project CHIP Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,16 @@
 
 import("//build_overrides/build.gni")
 
-import("${build_root}/toolchain/gcc_toolchain.gni")
+# The location of the build configuration file.
+buildconfig = "${build_root}/config/BUILDCONFIG.gn"
 
-template("riscv_toolchain") {
-  gcc_toolchain(target_name) {
-    _tool_name_root = "riscv64-unknown-elf-"
-    ar = _tool_name_root + "ar"
-    cc = _tool_name_root + "gcc"
-    cxx = _tool_name_root + "g++"
+# CHIP uses angle bracket includes.
+check_system_includes = true
 
-    toolchain_args = {
-      current_cpu = "riscv"
-      current_os = invoker.current_os
-      is_clang = false
+default_args = {
+  target_cpu = "riscv"
+  target_os = "freertos"
 
-      forward_variables_from(invoker.toolchain_args, "*")
-    }
-  }
+  import("//args.gni")
 }
+

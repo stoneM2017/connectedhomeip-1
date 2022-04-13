@@ -12,23 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//build_overrides/build.gni")
-
-import("${build_root}/toolchain/gcc_toolchain.gni")
-
-template("riscv_toolchain") {
-  gcc_toolchain(target_name) {
-    _tool_name_root = "riscv64-unknown-elf-"
-    ar = _tool_name_root + "ar"
-    cc = _tool_name_root + "gcc"
-    cxx = _tool_name_root + "g++"
-
-    toolchain_args = {
-      current_cpu = "riscv"
-      current_os = invoker.current_os
-      is_clang = false
-
-      forward_variables_from(invoker.toolchain_args, "*")
-    }
-  }
+declare_args() {
+  # BL602 board used
+  bl702_board = "BL-IOT-DVK"
 }
+
+if (bl702_board == "") {
+  bl702_board = "BL-IOT-DVK"
+}
+
+assert(bl702_board != "", "bl702_board must be specified")
+
+board_defines = []

@@ -207,7 +207,6 @@
 	path = third_party/bouffalolab/bl602_sdk/repo
 	url = https://github.com/bouffalolab/bl_iot_sdk_matter.git
 	branch = bl602_release
-[submodule "third_party/bouffalolab/bl_iot_sdk"]
-	path = third_party/bouffalolab/bl_iot_sdk
+[submodule "third_party/bouffalolab/bl_iot_sdk/repo"]
+	path = third_party/bouffalolab/bl_iot_sdk/repo
 	url = git@github.com:bouffalolab/bl_iot_sdk.git
-        branch = bl702_matter
