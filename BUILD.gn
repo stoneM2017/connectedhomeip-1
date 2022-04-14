@@ -256,6 +256,9 @@ if (current_toolchain != "${dir_pw_toolchain}/default:default") {
     # Build the cc13x2x7_26x2x7 lock app example.
     enable_cc13x2x7_26x2x7_lock_app_build = enable_ti_simplelink_builds
 
+    # Build the cc13x2x7_26x2x7 all-clusters app example.
+    enable_cc13x2x7_26x2x7_all_clusters_app_build = enable_ti_simplelink_builds
+
     # Build the efr32 lock app example.
     enable_efr32_lock_app_build = enable_efr32_builds
 
@@ -356,6 +359,12 @@ if (current_toolchain != "${dir_pw_toolchain}/default:default") {
   if (enable_cc13x2x7_26x2x7_lock_app_build) {
     group("cc13x2x7_26x2x7_lock_app") {
       deps = [ "${chip_root}/examples/lock-app/cc13x2x7_26x2x7(${chip_root}/config/cc13x2_26x2/toolchain:cc13x2x7_26x2x7_lock_app)" ]
+    }
+  }
+
+  if (enable_cc13x2x7_26x2x7_all_clusters_app_build) {
+    group("cc13x2x7_26x2x7_all_clusters_app") {
+      deps = [ "${chip_root}/examples/all-clusters-app/cc13x2x7_26x2x7(${chip_root}/config/cc13x2_26x2/toolchain:cc13x2x7_26x2x7_all_clusters_app)" ]
     }
   }
 
@@ -550,6 +559,9 @@ if (current_toolchain != "${dir_pw_toolchain}/default:default") {
     }
     if (enable_cc13x2x7_26x2x7_lock_app_build) {
       deps += [ ":cc13x2x7_26x2x7_lock_app" ]
+    }
+    if (enable_cc13x2x7_26x2x7_all_clusters_app_build) {
+      deps += [ ":cc13x2x7_26x2x7_all_clusters_app" ]
     }
   }
 
