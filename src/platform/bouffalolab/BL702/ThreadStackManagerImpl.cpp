@@ -36,6 +36,8 @@
 
 #include <lib/support/CHIPPlatformMemory.h>
 
+#include <mbedtls/platform.h>
+
 #include <openthread_port.h>
 
 namespace chip {
@@ -59,6 +61,8 @@ CHIP_ERROR ThreadStackManagerImpl::InitThreadStack(otInstance * otInst)
     SuccessOrExit(err);
     err = GenericThreadStackManagerImpl_OpenThread_LwIP<ThreadStackManagerImpl>::DoInit(otInst);
     SuccessOrExit(err);
+
+    mbedtls_platform_set_calloc_free(pvPortCalloc, vPortFree);
 
 exit:
     return err;

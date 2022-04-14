@@ -322,7 +322,7 @@ CHIP_ERROR BL702Config::ReadKVS(const char * key, void * value, size_t value_siz
     free (p);
     ef_port_env_unlock();
 
-    return CHIP_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    return CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
 }
 
 CHIP_ERROR BL702Config::WriteKVS(const char * key, const void * value, size_t value_size) 
