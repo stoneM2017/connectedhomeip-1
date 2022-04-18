@@ -69,13 +69,16 @@ extern "C" {
 #define FACTORY_RESET_CANCEL_WINDOW_TIMEOUT 3000
 #define APP_TASK_PRIORITY                   2
 #define APP_REBOOT_RESET_COUNT              3
-constexpr int kExtDiscoveryTimeoutSecs         = 20;
+#define EXT_DISCOVERY_TIMEOUT_SECS          20
+#define APP_LIGHT_ENDPOINT_ID               1
 
 namespace {
 
 LEDWidget sStatusLED;
 ColorLEDWidget sLightLED;
-uint8_t is_powerup_indicated = 0;
+
+Identify sIdentify = { APP_LIGHT_ENDPOINT_ID, AppTask::IdentifyStartHandler, AppTask::IdentifyStopHandler,
+                       EMBER_ZCL_IDENTIFY_IDENTIFY_TYPE_VISIBLE_LED };
 
 } // namespace
 
@@ -136,7 +139,7 @@ void PlatformManagerImpl::PlatformInit(void)
 
     // Initialize device attestation config
     SetDeviceAttestationCredentialsProvider(Examples::GetExampleDACProvider());
-    chip::app::DnssdServer::Instance().SetExtendedDiscoveryTimeoutSecs(kExtDiscoveryTimeoutSecs);
+    chip::app::DnssdServer::Instance().SetExtendedDiscoveryTimeoutSecs(EXT_DISCOVERY_TIMEOUT_SECS);
 
     // Init ZCL Data Model
     static chip::CommonCaseDeviceServerInitParams initParams;
@@ -315,14 +318,14 @@ void AppTask::LightingUpdate(app_event_t event)
     {
         if (EMBER_ZCL_STATUS_SUCCESS != emberAfReadAttribute(endpoint,
             ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, 
-            CLUSTER_MASK_SERVER, &onoff, 1, &dataType)) {
+            CLUSTER_MASK_SERVER, &onoff, APP_LIGHT_ENDPOINT_ID, &dataType)) {
             break;
         }
 
         if (EMBER_ZCL_STATUS_SUCCESS != emberAfReadAttribute(endpoint,
             ZCL_LEVEL_CONTROL_CLUSTER_ID, 
             ZCL_CURRENT_LEVEL_ATTRIBUTE_ID, 
-            CLUSTER_MASK_SERVER, &v, 1, &dataType)) {
+            CLUSTER_MASK_SERVER, &v, APP_LIGHT_ENDPOINT_ID, &dataType)) {
             break;
         }
 
@@ -404,6 +407,18 @@ void AppTask::TimerEventHandler(void)
     StartTimer();
 }
 
+void AppTask::IdentifyStartHandler(Identify *)
+{
+    GetAppTask().PostEvent(APP_EVENT_IDENTIFY);
+    ChipLogError(NotSpecified, "identify");
+}
+
+void AppTask::IdentifyStopHandler(Identify *)
+{
+    GetAppTask().PostEvent(APP_EVENT_SYS_PROVISIONED);
+    ChipLogError(NotSpecified, "identify stop");
+}
+
 void AppTask::TimerDutyCycle(app_event_t event)
 {
     static uint32_t backup_blinkOnTimeMS, backup_blinkOffTimeMS;
@@ -417,9 +432,12 @@ void AppTask::TimerDutyCycle(app_event_t event)
     else if (event & APP_EVENT_SYS_BLE_ADV){
         GetAppTask().mBlinkOnTimeMS = 200, GetAppTask().mBlinkOffTimeMS = 800;
     }
-    else if (event & APP_EVENT_BTN_FACTORY_RESET) {
+    else if (event & APP_EVENT_FACTORY_RESET) {
         GetAppTask().mBlinkOnTimeMS = 500, GetAppTask().mBlinkOffTimeMS = 500;
         return;
+    }
+    else if (event & APP_EVENT_IDENTIFY) {
+        GetAppTask().mBlinkOnTimeMS = 500, GetAppTask().mBlinkOffTimeMS = 500;
     }
     else if (event & APP_EVENT_BTN_FACTORY_RESET_CANCEL) {
         GetAppTask().mBlinkOnTimeMS = backup_blinkOnTimeMS, GetAppTask().mBlinkOffTimeMS = backup_blinkOffTimeMS;

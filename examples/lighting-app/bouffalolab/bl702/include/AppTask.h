@@ -39,6 +39,8 @@ using namespace ::chip::DeviceLayer;
 #define APP_ERROR_START_TIMER_FAILED CHIP_APPLICATION_ERROR(0x05)
 #define APP_ERROR_STOP_TIMER_FAILED CHIP_APPLICATION_ERROR(0x06)
 
+struct Identify;
+
 class AppTask
 {
 public:
@@ -58,12 +60,13 @@ public:
         APP_EVENT_SYS_BLE_CONN              = 0x00000200,
         APP_EVENT_SYS_PROVISIONED           = 0x00000400,
         APP_EVENT_FACTORY_RESET             = 0x00000800,
+        APP_EVENT_IDENTIFY                  = 0x00001000,
         APP_EVENT_SYS_ALL_MASK              = APP_EVENT_SYS_BLE_ADV | APP_EVENT_SYS_BLE_CONN 
-            | APP_EVENT_SYS_PROVISIONED | APP_EVENT_FACTORY_RESET,
+            | APP_EVENT_SYS_PROVISIONED | APP_EVENT_FACTORY_RESET |APP_EVENT_IDENTIFY,
 
-        APP_EVENT_LIGHTING_ONOFF            = 0x00001000,
-        APP_EVENT_LIGHTING_LEVEL            = 0x00002000,
-        APP_EVENT_LIGHTING_COLOR            = 0x00004000,
+        APP_EVENT_LIGHTING_ONOFF            = 0x00010000,
+        APP_EVENT_LIGHTING_LEVEL            = 0x00020000,
+        APP_EVENT_LIGHTING_COLOR            = 0x00040000,
         APP_EVENT_LIGHTING_MASK             = APP_EVENT_LIGHTING_ONOFF
             | APP_EVENT_LIGHTING_LEVEL | APP_EVENT_LIGHTING_COLOR,
 
@@ -79,6 +82,9 @@ public:
         return mEndpointId;
     }
     void PostEvent(app_event_t event);
+    
+    static void IdentifyStartHandler(Identify *);
+    static void IdentifyStopHandler(Identify *);
 
 private:
     friend AppTask & GetAppTask(void);
