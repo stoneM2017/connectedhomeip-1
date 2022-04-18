@@ -2127,9 +2127,9 @@ CHIP_ERROR GenericThreadStackManagerImpl_OpenThread<ImplClass>::_RemoveSrpServic
     CHIP_ERROR error                         = CHIP_NO_ERROR;
     typename SrpClient::Service * srpService = nullptr;
 
-    VerifyOrExit(mSrpClient.mIsInitialized, error = CHIP_ERROR_WELL_UNINITIALIZED);
-
     Impl()->LockThreadStack();
+
+    VerifyOrExit(mSrpClient.mIsInitialized, error = CHIP_ERROR_WELL_UNINITIALIZED);
 
     VerifyOrExit(aInstanceName, error = CHIP_ERROR_INVALID_ARGUMENT);
     VerifyOrExit(aName, error = CHIP_ERROR_INVALID_ARGUMENT);
@@ -2177,9 +2177,9 @@ CHIP_ERROR GenericThreadStackManagerImpl_OpenThread<ImplClass>::_RemoveInvalidSr
 {
     CHIP_ERROR error = CHIP_NO_ERROR;
 
-    VerifyOrExit(mSrpClient.mIsInitialized, error = CHIP_ERROR_WELL_UNINITIALIZED);
-
     Impl()->LockThreadStack();
+
+    VerifyOrExit(mSrpClient.mIsInitialized, error = CHIP_ERROR_WELL_UNINITIALIZED);
 
     for (typename SrpClient::Service & service : mSrpClient.mServices)
     {
@@ -2203,9 +2203,9 @@ CHIP_ERROR GenericThreadStackManagerImpl_OpenThread<ImplClass>::_SetupSrpHost(co
     CHIP_ERROR error = CHIP_NO_ERROR;
     Inet::IPAddress hostAddress;
 
-    VerifyOrExit(mSrpClient.mIsInitialized, error = CHIP_ERROR_WELL_UNINITIALIZED);
-
     Impl()->LockThreadStack();
+
+    VerifyOrExit(mSrpClient.mIsInitialized, error = CHIP_ERROR_WELL_UNINITIALIZED);
 
     VerifyOrExit(aHostName, error = CHIP_ERROR_INVALID_ARGUMENT);
     VerifyOrExit(strlen(aHostName) <= Dnssd::kHostNameMaxLength, error = CHIP_ERROR_INVALID_STRING_LENGTH);

@@ -54,15 +54,6 @@ CHIP_ERROR BL702Config::Init()
     return CHIP_ERROR_NO_MEMORY;
 }
 
-
-#ifdef CFG_USE_PSRAM
-extern "C" bool isPsramAddress(void * paddr) ;
-bool BL702Config:: isPsramRegion(void * paddr) 
-{
-    return isPsramAddress(paddr);
-}
-#endif
-
 CHIP_ERROR BL702Config::ReadConfigValue(const char * key, uint8_t * val, size_t size, size_t readsize)
 {
     env_node_obj node;
@@ -81,24 +72,7 @@ CHIP_ERROR BL702Config::ReadConfigValue(const char * key, uint8_t * val, size_t 
             readsize = size;
         }
 
-#ifdef CFG_USE_PSRAM
-        if (isPsramRegion(val)) {
-            uint8_t * temp = (uint8_t *)malloc(size + sizeof(size_t));
-            if (0 == temp) {
-                free(p);
-                ef_port_env_unlock();
-                return CHIP_ERROR_NO_MEMORY;
-            }
-            ef_port_read(node.addr.value, (uint32_t *) temp, readsize);
-            memcpy(val, temp, readsize);
-            free(temp);
-        }
-        else {
-            ef_port_read(node.addr.value, (uint32_t *) val, readsize);
-        }
-#else
         ef_port_read(node.addr.value, (uint32_t *) val, readsize);
-#endif
 
         free (p);
         ef_port_env_unlock();
@@ -167,27 +141,7 @@ CHIP_ERROR BL702Config::WriteConfigValue(const char * key, uint8_t * val, size_t
         return CHIP_ERROR_NO_MEMORY;
     }
 
-#ifdef CFG_USE_PSRAM
-    if (isPsramRegion(val)) {
-
-        uint8_t * temp = (uint8_t *)malloc(size + sizeof(size_t));
-        if (0 == temp) {
-            free(p);
-            ef_port_env_unlock();
-            return CHIP_ERROR_NO_MEMORY;
-        }
-
-        memcpy(temp, val, size);
-        ret = ef_set_env_blob(p, temp, size);
-
-        free(temp);
-    }
-    else {
-        ret = ef_set_env_blob(p, val, size);
-    }
-#else
     ret = ef_set_env_blob(p, val, size);
-#endif
 
     free(p);
     ef_port_env_unlock();
@@ -268,6 +222,7 @@ CHIP_ERROR BL702Config::ReadKVS(const char * key, void * value, size_t value_siz
     char * p = (char *)malloc((sizeof(KCONFIG_SECT_KVS) + strlen(key) + sizeof(size_t)));
     if (!p) {
         ef_port_env_unlock();
+
         return CHIP_ERROR_NO_MEMORY;
     }
 
@@ -290,24 +245,7 @@ CHIP_ERROR BL702Config::ReadKVS(const char * key, void * value, size_t value_siz
             read_len = value_size;
         }
 
-#ifdef CFG_USE_PSRAM
-        if (isPsramRegion(value)) {
-            uint8_t * temp = (uint8_t *)malloc(read_len + sizeof(size_t));
-            if (0 == temp) {
-                free(p);
-                ef_port_env_unlock();
-                return CHIP_ERROR_NO_MEMORY;
-            }
-            ef_port_read(node.addr.value + offset_bytes, (uint32_t *) temp, read_len);
-            memcpy(value, temp, read_len);
-            free(temp);
-        }
-        else {
-            ef_port_read(node.addr.value + offset_bytes, (uint32_t *) value, read_len);
-        }
-#else
         ef_port_read(node.addr.value + offset_bytes, (uint32_t *) value, read_len);
-#endif
 
         if (read_bytes_size) {
             *read_bytes_size = read_len;
@@ -322,7 +260,7 @@ CHIP_ERROR BL702Config::ReadKVS(const char * key, void * value, size_t value_siz
     free (p);
     ef_port_env_unlock();
 
-    return CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
+    return CHIP_DEVICE_ERROR_CONFIG_NOT_FOUND;
 }
 
 CHIP_ERROR BL702Config::WriteKVS(const char * key, const void * value, size_t value_size) 
@@ -341,26 +279,7 @@ CHIP_ERROR BL702Config::WriteKVS(const char * key, const void * value, size_t va
     p[sizeof(KCONFIG_SECT_KVS)- 1] = '_';
     strcpy(p + sizeof(KCONFIG_SECT_KVS), key);
 
-#ifdef CFG_USE_PSRAM
-    if (isPsramRegion((void *)value)) {
-        uint8_t * temp = (uint8_t *)malloc(value_size + sizeof(size_t));
-        if (0 == temp) {
-            free(p);
-            ef_port_env_unlock();
-            return CHIP_ERROR_NO_MEMORY;
-        }
-
-        memcpy(temp, value, value_size);
-        ret = ef_set_env_blob(p, temp, value_size);
-
-        free(temp);
-    }
-    else {
-        ret = ef_set_env_blob(p, value, value_size);
-    }
-#else
     ret = ef_set_env_blob(p, value, value_size);
-#endif
 
     free(p);
     ef_port_env_unlock();
@@ -401,29 +320,6 @@ CHIP_ERROR BL702Config::WriteWiFiInfo(const char *ssid, const char *passwd)
 
     ef_port_env_lock();
 
-#ifdef CFG_USE_PSRAM
-    if (isPsramRegion((void *)ssid)) {
-        pssid =  (char *)malloc(strlen(ssid) + 2);
-        if (NULL == pssid) {
-            ef_port_env_unlock();
-            return CHIP_ERROR_NO_MEMORY;
-        }
-
-        strcpy(pssid, (char *)ssid);
-    }
-    if (isPsramRegion((void *)passwd)) {
-        ppass =  (char *)malloc(strlen(passwd) + 2);
-        if (NULL == ppass) {
-            if (pssid != ssid) {
-                free(pssid);
-            }
-            ef_port_env_unlock();
-            return CHIP_ERROR_NO_MEMORY;
-        }
-        strcpy(ppass, (char *)passwd);
-    }
-#endif
-
     if ( EF_NO_ERR == ef_set_env_blob(kBLConfigKey_wifissid, pssid, strlen(pssid))
         && EF_NO_ERR == ef_set_env_blob(kBLConfigKey_wifipassword, ppass, strlen(ppass))) {
 
@@ -431,15 +327,6 @@ CHIP_ERROR BL702Config::WriteWiFiInfo(const char *ssid, const char *passwd)
 
         return CHIP_NO_ERROR;
     }
-
-#ifdef CFG_USE_PSRAM
-    if (pssid != ssid) {
-        free(pssid);
-    }
-    if (ppass != passwd) {
-        free(ppass);
-    }
-#endif
 
     ef_port_env_unlock();
 
@@ -456,48 +343,11 @@ CHIP_ERROR BL702Config::ReadWiFiInfo(const char *ssid, uint32_t ssid_size, const
 
     ef_port_env_lock();
 
-#ifdef CFG_USE_PSRAM
-    if (isPsramRegion((void *)ssid)) {
-        pssid =  (char *)malloc(ssid_size + 2);
-        if (NULL == pssid) {
-            ef_port_env_unlock();
-            return CHIP_ERROR_NO_MEMORY;
-        }
-    }
-    if (isPsramRegion((void *)passwd)) {
-        ppass =  (char *)malloc(passwd_size + 2);
-        if (NULL == ppass) {
-            if (pssid != ssid) {
-                free(pssid);
-            }
-            ef_port_env_unlock();
-            return CHIP_ERROR_NO_MEMORY;
-        }
-    }
-#endif
-
     ef_get_env_blob(kBLConfigKey_wifissid, (void*)pssid, ssid_size, &saved_value_len);
     if (saved_value_len != 0) {
         saved_value_len = 0;
         ef_get_env_blob(kBLConfigKey_wifipassword, (void*)ppass, passwd_size, &saved_value_len);
     }
-
-#ifdef CFG_USE_PSRAM
-    if (saved_value_len) {
-        if (ssid != pssid) {
-            strcpy((char *)ssid, pssid);
-        }
-        if (passwd != ppass) {
-            strcpy((char *)passwd, ppass);
-        }
-    }
-    if (pssid != ssid) {
-        free(pssid);
-    }
-    if (ppass != passwd) {
-        free(ppass);
-    }
-#endif
 
     ef_port_env_unlock();
 

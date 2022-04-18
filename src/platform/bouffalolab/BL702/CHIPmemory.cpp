@@ -77,26 +77,6 @@ static void VerifyInitialized(const char * func)
 
 #endif
 
-extern "C" {
-extern uint8_t _heap_start;
-extern uint8_t _heap_size;
-
-#ifdef CFG_USE_PSRAM
-extern uint32_t __psram_bss_init_start;
-extern uint32_t __psram_bss_init_end;
-
-void * psramStart = 0;
-void * psramEnd = 0;
-extern uint32_t * arch_memset4(uint32_t *dst, const uint32_t val, uint32_t n);
-
-bool isPsramAddress(void * paddr) 
-{
-    return psramStart < paddr && paddr < psramEnd;
-}
-
-#endif
-}
-
 CHIP_ERROR MemoryAllocatorInit(void * buf, size_t bufSize)
 {
 #ifndef NDEBUG
@@ -105,13 +85,6 @@ CHIP_ERROR MemoryAllocatorInit(void * buf, size_t bufSize)
         fprintf(stderr, "ABORT: chip::Platform::MemoryInit() called twice.\n");
         abort();
     }
-#endif
-#ifdef CFG_USE_PSRAM
-    HeapRegion_t *pregion = (HeapRegion_t *)buf;
-    vPortDefineHeapRegionsPsram(pregion);
-
-    psramStart = (void *)&__psram_bss_init_start;
-    psramEnd = (void *)(pregion->pucStartAddress + pregion->xSizeInBytes);
 #endif
 
     return CHIP_NO_ERROR;
@@ -135,29 +108,14 @@ void * MemoryAlloc(size_t size)
 {
     VERIFY_INITIALIZED();
 
-    // if (xPortGetFreeHeapSize() > size) {
-    //     return malloc(size);
-    // }
-
-#ifdef CFG_USE_PSRAM
-    return pvPortMallocPsram(size);
-#else
     return malloc(size);
-#endif
 }
 
 void * MemoryCalloc(size_t num, size_t size)
 {
     VERIFY_INITIALIZED();
 
-    // if (xPortGetFreeHeapSize() > num * size + 3 * 1024) {
-    //     return calloc(num, size);
-    // }
-#ifdef CFG_USE_PSRAM
     return pvPortCallocPsram(num, size);
-#else
-    return 0;
-#endif
 }
 
 void * MemoryRealloc(void * p, size_t size)
@@ -165,14 +123,7 @@ void * MemoryRealloc(void * p, size_t size)
     VERIFY_INITIALIZED();
     VERIFY_POINTER(p);
 
-#ifdef CFG_USE_PSRAM
-    // if (&_heap_start < (uint8_t *)p && (uint8_t *)p < &_heap_start + (uint32_t)&_heap_size) {
-    //     return realloc(p, size);
-    // }
-    return pvPortReallocPsram(p, size);
-#else
     return realloc(p, size);
-#endif
 }
 
 void MemoryFree(void * p)
@@ -180,15 +131,7 @@ void MemoryFree(void * p)
     VERIFY_INITIALIZED();
     VERIFY_POINTER(p);
 
-#ifdef CFG_USE_PSRAM
-    // if (&_heap_start < (uint8_t *)p && (uint8_t *)p < &_heap_start + (uint32_t)&_heap_size) {
-    //     free(p);
-    //     return;
-    // }
-    vPortFreePsram(p);
-#else
     free(p);
-#endif
 }
 
 bool MemoryInternalCheckPointer(const void * p, size_t min_size)

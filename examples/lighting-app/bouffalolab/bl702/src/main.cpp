@@ -277,6 +277,10 @@ extern "C" void bl702_init(void)
     hal_board_cfg(0);
     hosal_dma_init();
 
+#ifdef CFG_USE_PSRAM
+    vPortDefineHeapRegionsPsram(xPsramHeapRegions);
+#endif
+
     ChipLogProgress(NotSpecified, "Heap %u@%p"
 #if defined(CFG_USE_PSRAM)
         ", %u@%p"
@@ -298,11 +302,7 @@ extern "C" void bl702_main(void)
 #endif
 
     ChipLogProgress(NotSpecified, "Init CHIP Memory");
-#if defined(CFG_USE_PSRAM)
-    chip::Platform::MemoryInit((void *)&xPsramHeapRegions, 0);
-#else
     chip::Platform::MemoryInit(NULL, 0);
-#endif /*CFG_USE_PSRAM*/
 
     ChipLogProgress(NotSpecified, "Starting App Task");
     StartAppTask();

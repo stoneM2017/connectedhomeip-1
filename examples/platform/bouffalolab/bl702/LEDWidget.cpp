@@ -61,21 +61,13 @@ void LEDWidget::SetOnoff(bool state)
     };
 
     mOnoff = state;
-#if BOARD_3R_V2Hub
-    if (state) {
-        hosal_gpio_output_set(&gpio_led, 0);
-    }
-    else {
-        hosal_gpio_output_set(&gpio_led, 1);
-    }
-#else
+
     if (state) {
         hosal_gpio_output_set(&gpio_led, 1);
     }
     else {
         hosal_gpio_output_set(&gpio_led, 0);
     }
-#endif
 }
 
 bool LEDWidget::GetOnoff(void)

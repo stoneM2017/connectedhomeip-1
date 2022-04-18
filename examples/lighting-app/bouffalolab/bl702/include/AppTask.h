@@ -88,10 +88,9 @@ private:
     static void ChipEventHandler(const ChipDeviceEvent * event, intptr_t arg);
     static uint32_t AppRebootCheck(uint32_t time = 0);
 
-    static void UpdateCluster_LightOnoff(uint8_t bonoff);
-    static void UpdateLighting(app_event_t event);
+    static void LightingSetOnoff(uint8_t bonoff);
+    static void LightingUpdate(app_event_t event);
 
-#if !BL70X_LIGHT
     static bool StartTimer(void);
     static void CancelTimer(void);
     static void TimerEventHandler(void);
@@ -101,7 +100,6 @@ private:
     static void ButtonInit(void);
     static bool ButtonPressed(void);
     static void ButtonEventHandler(void * arg);
-#endif
 
     static void ScheduleInit(intptr_t arg);
     static void AppTaskMain(void * pvParameter);

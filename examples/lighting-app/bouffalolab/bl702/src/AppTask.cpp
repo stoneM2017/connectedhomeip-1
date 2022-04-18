@@ -21,26 +21,24 @@
 #include "AppTask.h"
 #include "AppConfig.h"
 #include "LEDWidget.h"
+
 #include <app-common/zap-generated/attribute-id.h>
 #include <app-common/zap-generated/attribute-type.h>
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <app-common/zap-generated/cluster-id.h>
 #include <app/clusters/identify-server/identify-server.h>
-#include <app/clusters/on-off-server/on-off-server.h>
-#include <app/server/OnboardingCodesUtil.h>
-#include <app/server/Server.h>
 #include <app/util/attribute-storage.h>
 
-#include <assert.h>
-
+#include <app/server/Dnssd.h>
+#include <app/server/OnboardingCodesUtil.h>
+#include <app/server/Server.h>
 #include <credentials/DeviceAttestationCredsProvider.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
-
-#include <setup_payload/QRCodeSetupPayloadGenerator.h>
-#include <setup_payload/SetupPayload.h>
-
+#include <lib/support/CHIPMem.h>
 #include <lib/support/CodeUtils.h>
+#include <lib/support/ErrorStr.h>
+#include <system/SystemClock.h>
 
-#include <platform/CHIPDeviceLayer.h>
 #include <platform/bouffalolab/bl702/PlatformManagerImpl.h>
 
 #if HEAP_MONITORING
@@ -71,6 +69,7 @@ extern "C" {
 #define FACTORY_RESET_CANCEL_WINDOW_TIMEOUT 3000
 #define APP_TASK_PRIORITY                   2
 #define APP_REBOOT_RESET_COUNT              3
+constexpr int kExtDiscoveryTimeoutSecs         = 20;
 
 namespace {
 
@@ -80,8 +79,8 @@ uint8_t is_powerup_indicated = 0;
 
 } // namespace
 
-
-using namespace chip::TLV;
+using namespace ::chip;
+using namespace ::chip::app;
 using namespace ::chip::Credentials;
 using namespace ::chip::DeviceLayer;
 
@@ -105,8 +104,7 @@ void PlatformManagerImpl::PlatformInit(void)
 
     ChipLogProgress(NotSpecified, "Initializing CHIP stack");
     CHIP_ERROR ret = PlatformMgr().InitChipStack();
-    if (ret != CHIP_NO_ERROR)
-    {
+    if (ret != CHIP_NO_ERROR) {
         ChipLogError(NotSpecified, "PlatformMgr().InitChipStack() failed"); 
         appError(ret);
     }
@@ -119,8 +117,7 @@ void PlatformManagerImpl::PlatformInit(void)
 #endif
     ChipLogProgress(NotSpecified, "Initializing OpenThread stack");
     ret = ThreadStackMgr().InitThreadStack();
-    if (ret != CHIP_NO_ERROR)
-    {
+    if (ret != CHIP_NO_ERROR) {
         ChipLogError(NotSpecified, "ThreadStackMgr().InitThreadStack() failed"); 
         appError(ret);
     }
@@ -130,8 +127,7 @@ void PlatformManagerImpl::PlatformInit(void)
 #else
     ret = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice);
 #endif
-    if (ret != CHIP_NO_ERROR)
-    {
+    if (ret != CHIP_NO_ERROR) {
         ChipLogError(NotSpecified, "ConnectivityMgr().SetThreadDeviceType() failed"); 
         appError(ret);
     }
@@ -140,18 +136,23 @@ void PlatformManagerImpl::PlatformInit(void)
 
     // Initialize device attestation config
     SetDeviceAttestationCredentialsProvider(Examples::GetExampleDACProvider());
+    chip::app::DnssdServer::Instance().SetExtendedDiscoveryTimeoutSecs(kExtDiscoveryTimeoutSecs);
 
     // Init ZCL Data Model
     static chip::CommonCaseDeviceServerInitParams initParams;
     (void) initParams.InitializeStaticResourcesBeforeServerInit();
-    chip::Server::GetInstance().Init(initParams);
+
+    ret = chip::Server::GetInstance().Init(initParams);
+    if (ret != CHIP_NO_ERROR) {
+        ChipLogError(NotSpecified, "chip::Server::GetInstance().Init(initParams) failed"); 
+        appError(ret);
+    }
     chip::DeviceLayer::PlatformMgr().UnlockChipStack();
 
     ChipLogProgress(NotSpecified, "Starting OpenThread task");
     // Start OpenThread task
     ret = ThreadStackMgrImpl().StartThreadTask();
-    if (ret != CHIP_NO_ERROR)
-    {
+    if (ret != CHIP_NO_ERROR) {
         ChipLogError(NotSpecified, "ThreadStackMgr().StartThreadTask() failed"); 
         appError(ret);
     }
@@ -159,8 +160,10 @@ void PlatformManagerImpl::PlatformInit(void)
     ConfigurationMgr().LogDeviceConfig();
 
     PrintOnboardingCodes(chip::RendezvousInformationFlag(chip::RendezvousInformationFlag::kBLE));
-
+    PlatformMgr().AddEventHandler(AppTask::ChipEventHandler, 0);
+    
     GetAppTask().PostEvent(AppTask::APP_EVENT_STARTED);
+    GetAppTask().PostEvent(AppTask::APP_EVENT_TIMER);
     vTaskResume(GetAppTask().sAppTaskHandle);
 }
 
@@ -242,32 +245,30 @@ void AppTask::AppTaskMain(void * pvParameter)
         BaseType_t eventReceived = xTaskNotifyWait( 0, APP_EVENT_ALL_MASK, (uint32_t *)&appEvent, taskDelay);
 
         if (eventReceived) {
+            TimerDutyCycle(appEvent);
+
             PlatformMgr().LockChipStack();
             if (APP_EVENT_STARTED & appEvent) {
-
-                UpdateCluster_LightOnoff(true);
+                LightingSetOnoff(true);
             }
 
             if (APP_EVENT_LIGHTING_MASK & appEvent) {
-                UpdateLighting((app_event_t)(APP_EVENT_LIGHTING_MASK & appEvent));
+                LightingUpdate((app_event_t)(APP_EVENT_LIGHTING_MASK & appEvent));
             }
 
             if (APP_EVENT_SYS_ALL_MASK & appEvent) {
-
                 if (APP_EVENT_FACTORY_RESET & appEvent) {
                     DeviceLayer::ConfigurationMgr().InitiateFactoryReset();
                 }
                 else {
-                    UpdateCluster_LightOnoff(true);
+                    LightingSetOnoff(true);
                 }
             }
             PlatformMgr().UnlockChipStack();
-        }
 
-        TimerDutyCycle(appEvent);
-        if (0 == is_powerup_indicated) {
-            is_powerup_indicated = StartTimer();
-            ChipLogProgress(NotSpecified, "Starimter call\r\n"); 
+            if (APP_EVENT_TIMER & appEvent) {
+                TimerEventHandler();
+            }
         }
     }
 }
@@ -304,9 +305,9 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t arg)
     }
 }
 
-void AppTask::UpdateLighting(app_event_t event)
+void AppTask::LightingUpdate(app_event_t event)
 {
-    uint8_t h, s, v, onoff;
+    uint8_t v, onoff;
     EmberAfAttributeType dataType;
     EndpointId endpoint = GetAppTask().GetEndpointId();
 
@@ -324,18 +325,6 @@ void AppTask::UpdateLighting(app_event_t event)
             CLUSTER_MASK_SERVER, &v, 1, &dataType)) {
             break;
         }
-        if (EMBER_ZCL_STATUS_SUCCESS != emberAfReadAttribute(endpoint,
-            ZCL_COLOR_CONTROL_CLUSTER_ID, 
-            ZCL_COLOR_CONTROL_CURRENT_HUE_ATTRIBUTE_ID, 
-            CLUSTER_MASK_SERVER, &h, 1, &dataType)) {
-            break;
-        }
-        if (EMBER_ZCL_STATUS_SUCCESS != emberAfReadAttribute(endpoint,
-            ZCL_COLOR_CONTROL_CLUSTER_ID, 
-            ZCL_COLOR_CONTROL_CURRENT_SATURATION_ATTRIBUTE_ID, 
-            CLUSTER_MASK_SERVER, &s, 1, &dataType)) {
-            break;
-        }
 
         if (0 == onoff) {
             sLightLED.SetLevel(0);
@@ -343,30 +332,35 @@ void AppTask::UpdateLighting(app_event_t event)
         else {
             sLightLED.SetLevel(v);
         }
-        ChipLogProgress(NotSpecified, "UpdateLighting (%d), onoff %d, level %d, hue %d, sta %d",
-            endpoint, onoff, v, h, s);
 
     } while(0);
 }
 
-void AppTask::UpdateCluster_LightOnoff(uint8_t bonoff)
+void AppTask::LightingSetOnoff(uint8_t bonoff)
 {
     uint8_t newValue = bonoff;
     EndpointId endpoint = GetAppTask().GetEndpointId();
 
     // write the new on/off value
-    EmberAfStatus status = OnOffServer::Instance().setOnOffValue(endpoint, newValue, false);
-
-    if (status != EMBER_ZCL_STATUS_SUCCESS) {
-        ChipLogError(NotSpecified, "ERR: updating on/off %x", status);
-    }
+    emberAfWriteAttribute(endpoint, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, CLUSTER_MASK_SERVER,
+                                                 (uint8_t *) &newValue, ZCL_BOOLEAN_ATTRIBUTE_TYPE);
+    newValue = 254;
+    emberAfWriteAttribute(endpoint, ZCL_LEVEL_CONTROL_CLUSTER_ID, ZCL_CURRENT_LEVEL_ATTRIBUTE_ID, CLUSTER_MASK_SERVER,
+                                                 (uint8_t *) &newValue, ZCL_INT8U_ATTRIBUTE_TYPE);
 }
 
 bool AppTask::StartTimer(void)
 {
-    uint32_t aTimeoutMs = sStatusLED.GetOnoff() ? GetAppTask().mBlinkOnTimeMS : GetAppTask().mBlinkOffTimeMS;
-    if (!aTimeoutMs) {
-        return false;
+    uint32_t aTimeoutMs = GetAppTask().mBlinkOnTimeMS;
+
+    if (GetAppTask().mBlinkOffTimeMS) {
+        aTimeoutMs = sStatusLED.GetOnoff() ? GetAppTask().mBlinkOnTimeMS : GetAppTask().mBlinkOffTimeMS;
+        sStatusLED.Toggle();
+    }
+    else {
+        if (!sStatusLED.GetOnoff()) {
+            sStatusLED.SetOnoff(1);
+        }
     }
 
     if (xTimerIsTimerActive(GetAppTask().sTimer)) {
@@ -407,7 +401,6 @@ void AppTask::TimerEventHandler(void)
         }
     }
 
-    sStatusLED.Toggle();
     StartTimer();
 }
 
@@ -415,8 +408,8 @@ void AppTask::TimerDutyCycle(app_event_t event)
 {
     static uint32_t backup_blinkOnTimeMS, backup_blinkOffTimeMS;
 
-    if (event & APP_EVENT_SYS_PROVISIONED) {
-        GetAppTask().mBlinkOnTimeMS = 800, GetAppTask().mBlinkOffTimeMS = 200;
+    if (event & (APP_EVENT_SYS_PROVISIONED | APP_EVENT_STARTED)) {
+        GetAppTask().mBlinkOnTimeMS = 1000, GetAppTask().mBlinkOffTimeMS = 0;
     }
     else if (event & APP_EVENT_SYS_BLE_CONN) {
         GetAppTask().mBlinkOnTimeMS = 200, GetAppTask().mBlinkOffTimeMS = 200;

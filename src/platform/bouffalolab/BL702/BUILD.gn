@@ -24,7 +24,6 @@ if (chip_enable_openthread) {
 
 static_library("BL702") {
   sources = [
-    "../../FreeRTOS/SystemTimeSupport.cpp",
     "../../SingletonConfigurationManager.cpp",
     "BlePlatformConfig.h",
     "bl702Config.cpp",
@@ -44,6 +43,8 @@ static_library("BL702") {
     "Logging.cpp",
     "PlatformManagerImpl.cpp",
     "PlatformManagerImpl.h",
+    "SystemTimeSupport.cpp",
+    "SystemTimeSupport.h",
     "SystemPlatformConfig.h",
     "CHIPmemory.cpp",
   ]

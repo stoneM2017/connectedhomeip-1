@@ -39,50 +39,6 @@
 #define CHIP_UART_PIN_BAUDRATE          2000000
 #define CHIP_UART_RX_BUFFSIZE           256
 
-#if BOARD_3R_V2Hub
-#define SPI_WIFI_MISO_PIN               29
-#define SPI_WIFI_MOSI_PIN               20
-#define SPI_WIFI_CLK_PIN                31
-#define SPI_WIFI_CS_PIN                 30
-#define SPI_WIFI_IRQ_PIN                9
-
-#define LED1_PIN                        10
-
-#define LED_B_PIN_PORT                  2
-#define LED_B_PIN                       12
-
-#define LED_R_PIN_PORT                  0
-#define LED_R_PIN                       10
-
-#define LED_G_PIN_PORT                  1
-#define LED_G_PIN                       16
-
-#define MAX_PWM_CHANNEL                 3
-
-#define CHIP_UART_PIN_RX                19
-#define CHIP_UART_PIN_TX                18
-
-#define LED_BTN_RESET                   11
-
-#elif BL70X_LIGHT
-
-#define LED_B_PIN_PORT                  2
-#define LED_B_PIN                       2
-
-#define LED_R_PIN_PORT                  1
-#define LED_R_PIN                       1
-
-#define LED_G_PIN_PORT                  0
-#define LED_G_PIN                       0
-
-#define LED1_PIN                        LED_B_PIN_PORT
-
-#define CHIP_UART_PIN_RX                15
-#define CHIP_UART_PIN_TX                14
-
-#define MAX_PWM_CHANNEL                 3
-
-#else
 #define LED1_PIN                        22
 
 #define LED_B_PIN_PORT                  1
@@ -99,5 +55,4 @@
 
 #define CHIP_UART_PIN_RX                15
 #define CHIP_UART_PIN_TX                14
-#endif /* BOARD_3R_V2Hub */
 

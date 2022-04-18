@@ -44,7 +44,11 @@ CHIP_ERROR KeyValueStoreManagerImpl::_Get(const char * key, void * value, size_t
     VerifyOrReturnError(key, CHIP_ERROR_INVALID_ARGUMENT);
     VerifyOrReturnError(value, CHIP_ERROR_INVALID_ARGUMENT);
 
-    return BL702Config::ReadKVS(key, value, value_size, read_bytes_size, offset_bytes);
+    CHIP_ERROR err = BL702Config::ReadKVS(key, value, value_size, read_bytes_size, offset_bytes);
+    if (err == CHIP_DEVICE_ERROR_CONFIG_NOT_FOUND) {
+        err = CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
+    }
+    return err;
 }
 
 CHIP_ERROR KeyValueStoreManagerImpl::_Put(const char * key, const void * value, size_t value_size)
