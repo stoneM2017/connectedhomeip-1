@@ -87,7 +87,7 @@ extern "C" unsigned int sleep(unsigned int seconds)
 
 extern "C" void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 {
-    ChipLogProgress(NotSpecified, "Stack Overflow checked. Stack name %s\r\n", pcTaskName);
+    ChipLogProgress(NotSpecified, "Stack Overflow checked. Stack name %s", pcTaskName);
     while (1)
     {
         /*empty here*/
@@ -96,7 +96,7 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskN
 
 extern "C" void vApplicationMallocFailedHook(void)
 {
-    ChipLogProgress(NotSpecified, "Memory Allocate Failed. Current left size is %d bytes\r\n", xPortGetFreeHeapSize());
+    ChipLogProgress(NotSpecified, "Memory Allocate Failed. Current left size is %d bytes", xPortGetFreeHeapSize());
     while (1)
     {
         /*empty here*/
@@ -166,7 +166,7 @@ extern "C" void user_vAssertCalled(void) __attribute__ ((weak, alias ("vAssertCa
 extern "C" void vAssertCalled(void)
 {
     taskDISABLE_INTERRUPTS();
-    ChipLogProgress(NotSpecified, "vAssertCalled\r\n");
+    ChipLogProgress(NotSpecified, "vAssertCalled");
     while(1);
 }
 
@@ -242,7 +242,7 @@ extern "C" void do_psram_test()
     }
 
     if ((psram_reset_count & 0x000000ff) > 3) {
-        ChipLogError(NotSpecified, "PSRAM is still failed to initialize after %ld system reset \r\n",
+        ChipLogError(NotSpecified, "PSRAM is still failed to initialize after %ld system reset",
                 psram_reset_count & 0x000000ff);
         vAssertCalled();
     }
@@ -257,9 +257,9 @@ extern "C" void bl702_init(void)
 
     hosal_uart_init(&uart_stdio);
 
-    ChipLogProgress(NotSpecified, "==================================================\r\n");
-    ChipLogProgress(NotSpecified, "chip-bl702-lighting-example starting\r\n");
-    ChipLogProgress(NotSpecified, "==================================================\r\n");
+    ChipLogProgress(NotSpecified, "==================================================");
+    ChipLogProgress(NotSpecified, "chip-bl702-lighting-example, built at " __DATE__ " " __TIME__ ", starting");
+    ChipLogProgress(NotSpecified, "==================================================");
 
     blog_init();
     bl_irq_init();
@@ -285,7 +285,7 @@ extern "C" void bl702_init(void)
 #if defined(CFG_USE_PSRAM)
         ", %u@%p"
 #endif /*CFG_USE_PSRAM*/
-        "\r\n",
+        ,
         (unsigned int)&_heap_size, &_heap_start
 #if defined(CFG_USE_PSRAM)
         ,(unsigned int)&_heap3_size, &_heap3_start

@@ -56,6 +56,13 @@ static_library("BL702") {
     "${chip_root}/src/platform:platform_base",
   ]
 
+  if (chip_enable_ota_requestor) {
+    sources += [
+      "OTAImageProcessorImpl.cpp",
+      "OTAImageProcessorImpl.h",
+    ]
+  }
+
   if (chip_enable_ble) {
     sources += [
       "BLEManagerImpl.cpp",
