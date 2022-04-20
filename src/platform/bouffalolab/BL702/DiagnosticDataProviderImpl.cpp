@@ -25,7 +25,7 @@
 #include <platform/ConnectivityManager.h>
 
 #include <platform/DiagnosticDataProvider.h>
-#include <platform/bouffalolab/bl702/DiagnosticDataProviderImpl.h>
+#include <platform/bouffalolab/BL702/DiagnosticDataProviderImpl.h>
 
 #include <lwip/tcpip.h>
 

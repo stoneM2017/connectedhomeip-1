@@ -42,14 +42,14 @@
 #include "OTAConfig.h"
 #endif // EFR32_OTA_ENABLED
 
-#include <platform/bouffalolab/bl702/PlatformManagerImpl.h>
+#include <platform/bouffalolab/BL702/PlatformManagerImpl.h>
 
 #if HEAP_MONITORING
 #include "MemMonitoring.h"
 #endif
 
 #if CHIP_ENABLE_OPENTHREAD
-#include <platform/bouffalolab/bl702/ThreadStackManagerImpl.h>
+#include <platform/bouffalolab/BL702/ThreadStackManagerImpl.h>
 #include <platform/OpenThread/OpenThreadUtils.h>
 #include <platform/ThreadStackManager.h>
 #include <openthread_port.h>

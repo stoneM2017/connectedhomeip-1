@@ -25,7 +25,7 @@
 #pragma once
 
 #include <platform/ConnectivityManager.h>
-#include <platform/bouffalolab/bl702/bl702Config.h>
+#include <platform/bouffalolab/BL702/bl702Config.h>
 #include <platform/internal/GenericConfigurationManagerImpl.h>
 
 namespace chip {

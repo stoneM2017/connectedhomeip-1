@@ -27,7 +27,7 @@
 
 #include <crypto/CHIPCryptoPAL.h>
 #include <platform/PlatformManager.h>
-#include <platform/bouffalolab/bl702/DiagnosticDataProviderImpl.h>
+#include <platform/bouffalolab/BL702/DiagnosticDataProviderImpl.h>
 #include <platform/internal/GenericPlatformManagerImpl_FreeRTOS.h>
 #include <platform/internal/GenericPlatformManagerImpl_FreeRTOS.ipp>
 

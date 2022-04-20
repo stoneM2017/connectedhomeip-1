@@ -25,7 +25,7 @@
 /* this file behaves like a config.h, comes first */
 #include <platform/internal/CHIPDeviceLayerInternal.h>
 
-#include <platform/bouffalolab/bl702/bl702Config.h>
+#include <platform/bouffalolab/BL702/bl702Config.h>
 
 #include <lib/core/CHIPEncoding.h>
 #include <lib/support/CHIPMem.h>

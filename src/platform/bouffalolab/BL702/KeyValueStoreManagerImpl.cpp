@@ -28,7 +28,7 @@
 
 #include <platform/KeyValueStoreManager.h>
 
-#include <platform/bouffalolab/bl702/bl702Config.h>
+#include <platform/bouffalolab/BL702/bl702Config.h>
 
 namespace chip {
 namespace DeviceLayer {
