@@ -46,6 +46,7 @@ declare_args() {
 
   setupPinCode                = 20202021
   setupDiscriminator          = 3840
+  OTA_periodic_query_timeout  = 86400
 }
 
 source_set("shell_common") {
@@ -90,6 +91,7 @@ bl702_sdk("sdk") {
   defines = [
     "CHIP_DEVICE_CONFIG_USE_TEST_SETUP_PIN_CODE=${setupPinCode}",
     "CHIP_DEVICE_CONFIG_USE_TEST_SETUP_DISCRIMINATOR=${setupDiscriminator}",
+    "OTA_PERIODIC_TIMEOUT=${OTA_periodic_query_timeout}",
   ]
 
   if (enable_psram) {
@@ -198,13 +200,17 @@ bl702_executable("lighting_app") {
     defines += [ "HEAP_MONITORING=1" ]
   }
 
+  if (chip_enable_ota_requestor) {
+    defines += [ "BL702_OTA_ENABLED" ]
+    sources += [ "${examples_plat_dir}/OTAConfig.cpp" ]
+  }
+
   if (enable_psram) {
     ldscript = "${examples_plat_dir}/ldscripts/psram_flash.ld"
   }
   else {
     ldscript = "${examples_plat_dir}/ldscripts/flash.ld"
   }
-
 
   inputs = [ ldscript ]
 

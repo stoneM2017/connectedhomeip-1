@@ -38,6 +38,9 @@
 #include <lib/support/CodeUtils.h>
 #include <lib/support/ErrorStr.h>
 #include <system/SystemClock.h>
+#ifdef BL702_OTA_ENABLED
+#include "OTAConfig.h"
+#endif // EFR32_OTA_ENABLED
 
 #include <platform/bouffalolab/bl702/PlatformManagerImpl.h>
 
@@ -164,7 +167,13 @@ void PlatformManagerImpl::PlatformInit(void)
 
     PrintOnboardingCodes(chip::RendezvousInformationFlag(chip::RendezvousInformationFlag::kBLE));
     PlatformMgr().AddEventHandler(AppTask::ChipEventHandler, 0);
-    
+
+#ifdef BL702_OTA_ENABLED
+    chip::DeviceLayer::PlatformMgr().LockChipStack();
+    OTAConfig::Init();
+    chip::DeviceLayer::PlatformMgr().UnlockChipStack();
+#endif // BL702_OTA_ENABLED
+
     GetAppTask().PostEvent(AppTask::APP_EVENT_STARTED);
     GetAppTask().PostEvent(AppTask::APP_EVENT_TIMER);
     vTaskResume(GetAppTask().sAppTaskHandle);

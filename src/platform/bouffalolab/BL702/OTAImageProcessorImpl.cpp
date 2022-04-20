@@ -19,8 +19,10 @@
 #include <app/clusters/ota-requestor/OTADownloader.h>
 
 #include "OTAImageProcessorImpl.h"
-#include <hal_sys.h>
-#include <hosal_ota.h>
+extern "C" {
+    #include <hal_sys.h>
+    #include <hosal_ota.h>
+}
 
 namespace chip {
 

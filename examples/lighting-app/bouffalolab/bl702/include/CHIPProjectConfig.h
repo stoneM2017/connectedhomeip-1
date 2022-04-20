@@ -98,7 +98,7 @@
 */
 /* The SoftwareVersion attribute of the Basic cluster. */
 #ifndef CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION
-#define CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION 0x00a0
+#define CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION 0x0001
 #endif
 
 /**
