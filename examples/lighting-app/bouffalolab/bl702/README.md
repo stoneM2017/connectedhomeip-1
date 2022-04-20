@@ -13,11 +13,11 @@
   
     For Linux Developer
     ```shell
-    $ export PATH=$PATH:<connectedhomeip_repo_path>/third_party/bouffalolab/bl_iot_sdk/repo/toolchain/riscv/Darwin/bin
+    $ export PATH=$PATH:<connectedhomeip_repo_path>/third_party/bouffalolab/bl_iot_sdk/repo/toolchain/riscv/Linux/bin
     ```
     For Mac OSX developer
     ```shell
-    $ export PATH=$PATH:<connectedhomeip_repo_path>/third_party/bouffalolab/bl_iot_sdk/repo/toolchain/riscv/Linux/bin
+    $ export PATH=$PATH:<connectedhomeip_repo_path>/third_party/bouffalolab/bl_iot_sdk/repo/toolchain/riscv/Darwin/bin
     ```
     where `<connectedhomeip_repo_path>` is the path to connectedhomeip repo.
 

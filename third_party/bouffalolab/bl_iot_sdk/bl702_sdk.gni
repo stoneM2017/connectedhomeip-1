@@ -464,7 +464,6 @@ template("bl702_sdk") {
       "CONFIG_BT_SETTINGS_CCC_LAZY_LOADING",
       "CONFIG_BT_SETTINGS_USE_PRINTK",
       "CFG_BLE_STACK_DBG_PRINT",
-      # "CONFIG_BT_DEVICE_NAME=\"BL702-TH-MATTER\""
     ]
 
     cflags = []
@@ -521,7 +520,8 @@ template("bl702_sdk") {
     ]
 
     cflags_c = [
-      "-Wno-sign-compare", "-Wno-unused-but-set-variable", "-Wno-misleading-indentation"
+      "-Wno-sign-compare", "-Wno-unused-but-set-variable", "-Wno-misleading-indentation", "-Wno-format",
+      "-Wno-format-nonliteral", "-Wno-format-security"
     ]
   }
 
