@@ -79,7 +79,13 @@ static_library("shell") {
       "MainLoopDefault.cpp",
       "streamer_bl602.cpp",
     ]
-  } else {
+  } else if (chip_device_platform == "bl702") {
+    sources += [
+      "MainLoopDefault.cpp",
+      "streamer_bl702.cpp",
+    ]
+  }
+  else {
     sources += [ "MainLoopDefault.cpp" ]
   }
 

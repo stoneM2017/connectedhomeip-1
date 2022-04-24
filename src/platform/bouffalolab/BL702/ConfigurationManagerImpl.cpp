@@ -228,21 +228,9 @@ void ConfigurationManagerImpl::DoFactoryReset(intptr_t arg)
         ChipLogError(DeviceLayer, "FactoryResetConfig() failed: %s", ErrorStr(err));
     }
 
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-
-    ChipLogProgress(DeviceLayer, "Clearing Thread provision");
-    ThreadStackMgr().ErasePersistentInfo();
-
-#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
-
-#if CHIP_DEVICE_CONFIG_ENABLE_WIFI
-    BL702Config::ClearWiFiInfo();
-#endif
-
     // Restart the system.
     ChipLogProgress(DeviceLayer, "System restarting");
-
-    bl_sys_reset_system();
+    bl_sys_reset_por();
 }
 
 } // namespace DeviceLayer

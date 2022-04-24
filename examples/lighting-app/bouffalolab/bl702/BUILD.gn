@@ -40,7 +40,7 @@ declare_args() {
   # Monitor & log memory usage at runtime.
   enable_heap_monitoring      = false
 
-  enable_chip_shell           = false
+  enable_chip_shell           = false 
 
   enable_psram                = true 
 
@@ -177,6 +177,7 @@ bl702_executable("lighting_app") {
       ":shell_common"
     ]
     include_dirs += [
+      "${chip_root}/src/lib/shell",
       "${chip_root}/examples/shell/shell_common/include",
     ]
   }

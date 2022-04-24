@@ -57,7 +57,7 @@
 
 #if CONFIG_ENABLE_CHIP_SHELL
 #include <ChipShellCollection.h>
-#include <src/lib/shell/Engine.h>
+#include <Engine.h>
 #include "uart.h"
 #endif
 
@@ -202,6 +202,8 @@ CHIP_ERROR AppTask::StartAppShellTask()
     static TaskHandle_t shellTask;
 
     uartInit();
+
+    Engine::Root().Init();
 
     cmd_misc_init();
     cmd_ping_init();

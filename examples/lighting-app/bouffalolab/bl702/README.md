@@ -35,6 +35,14 @@
     ```
     Output file `chip-bl702-lighting-example.bin` is located under <connectedhomeip_repo_path>examples/lighting-app/bouffalolab/bl702/out/debug folder.
 
+- Compile Options
+
+    Edit `examples/lighting-app/bouffalolab/bl702/BUILD.gn` for compile options:
+
+    - `app_board` for board;
+    - `app_chip` for chip type;
+    - `enable_chip_shell` for UART shell command enabled
+
 - Flash with BLDevCube_path
 
     Start BLDevCube_path 
@@ -51,7 +59,7 @@
     > For Mac OSX developer, `FW_OTA.bin.xz.hash` is under folder <BLDevCube_path>/Contents/MacOS/chips/bl702/ota; <br>
     > where `BLDevCube_path` is DevCube installation path. <br>
 
-- Firmware Behavior
+- Firmware Behavior for IOT Dev board
   
     Status LED: TX0<br>
     Lighting LED: RX1<br>

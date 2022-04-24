@@ -29,5 +29,3 @@ lwip_platform                   = "bl702"
 
 chip_enable_ota_requestor       = true
 chip_detail_logging             = false
-
-# which SOC has an internel PSRAM

@@ -59,11 +59,6 @@ CHIP_ERROR BL702Config::ReadConfigValue(const char * key, uint8_t * val, size_t 
     env_node_obj node;
 
     ef_port_env_lock();
-    char * p = (char *)malloc((KCONFIG_MAX_LEN + strlen(key) + sizeof(size_t)));
-    if (!p) {
-        ef_port_env_unlock();
-        return CHIP_ERROR_NO_MEMORY;
-    }
 
     if (true == ef_get_env_obj(key, &node)) {
         if (size > node.value_len) {
@@ -74,13 +69,11 @@ CHIP_ERROR BL702Config::ReadConfigValue(const char * key, uint8_t * val, size_t 
 
         ef_port_read(node.addr.value, (uint32_t *) val, readsize);
 
-        free (p);
         ef_port_env_unlock();
 
         return CHIP_NO_ERROR;
     }
 
-    free (p);
     ef_port_env_unlock();
 
     return CHIP_DEVICE_ERROR_CONFIG_NOT_FOUND;
@@ -135,15 +128,9 @@ CHIP_ERROR BL702Config::WriteConfigValue(const char * key, uint8_t * val, size_t
     EfErrCode ret;
 
     ef_port_env_lock();
-    char * p = (char *)malloc((KCONFIG_MAX_LEN + strlen(key) + sizeof(size_t)));
-    if (!p) {
-        ef_port_env_unlock();
-        return CHIP_ERROR_NO_MEMORY;
-    }
 
-    ret = ef_set_env_blob(p, val, size);
+    ret = ef_set_env_blob(key, val, size);
 
-    free(p);
     ef_port_env_unlock();
 
     if (ret == EF_NO_ERR) {
