@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#if APP_BOARD_LEDBTN
+
 typedef enum {
     pwm_channel_r,
     pwm_channel_g,
@@ -25,6 +27,8 @@ void set_color_yellow(uint8_t currLevel);
 void set_color(uint8_t currLevel, uint8_t currHue, uint8_t currSat);
 
 void set_level(uint8_t currLevel);
+
+#endif
 
 #ifdef __cplusplus
 }

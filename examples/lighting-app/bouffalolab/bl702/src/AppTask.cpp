@@ -455,32 +455,39 @@ void AppTask::TimerDutyCycle(app_event_t event)
     backup_blinkOnTimeMS = GetAppTask().mBlinkOnTimeMS, backup_blinkOffTimeMS = GetAppTask().mBlinkOffTimeMS;
 }
 
+#if APP_BOARD_LEDBTN
 hosal_gpio_dev_t gpio_key = {
     .port = LED_BTN_RESET,
     .config = INPUT_PULL_UP,
     .priv = NULL
 };
+#endif
 
 void AppTask::ButtonInit(void)
 {
     GetAppTask().buttonPressedTimeout = 0;
 
+#if APP_BOARD_LEDBTN
     hosal_gpio_init(&gpio_key);
     hosal_gpio_irq_set(&gpio_key, HOSAL_IRQ_TRIG_NEG_PULSE, GetAppTask().ButtonEventHandler, NULL);
+#endif
 }
 
 bool AppTask::ButtonPressed(void)
 {
     uint8_t val = 1;
-
+#if APP_BOARD_LEDBTN
     hosal_gpio_input_get(&gpio_key, &val);
+#endif
     return val == 0;
 }
 
 void AppTask::ButtonEventHandler(void * arg)
 {
     if (ButtonPressed()) {
+#if APP_BOARD_LEDBTN
         GetAppTask().PostEvent(APP_EVENT_BTN_FACTORY_RESET);
         GetAppTask().buttonPressedTimeout = chip::System::SystemClock().GetMonotonicMilliseconds64().count() + FACTORY_RESET_TRIGGER_TIMEOUT - 100;
+#endif
     }
 }

@@ -29,6 +29,7 @@
 
 void LEDWidget::Init()
 {
+#if APP_BOARD_LEDBTN
     mPin              = LED1_PIN;
 
     hosal_gpio_dev_t gpio_led = {
@@ -39,54 +40,54 @@ void LEDWidget::Init()
 
     hosal_gpio_init(&gpio_led);
     SetOnoff(false);
+#endif
 }
 
 void LEDWidget::Toggle(void)
 {
-    hosal_gpio_dev_t gpio_led = {
-        .port = mPin,
-        .config = OUTPUT_OPEN_DRAIN_NO_PULL,
-        .priv = NULL
-    };
-
     SetOnoff(1 - mOnoff);
 }
 
 void LEDWidget::SetOnoff(bool state)
 {
+#if APP_BOARD_LEDBTN
     hosal_gpio_dev_t gpio_led = {
         .port = mPin,
         .config = OUTPUT_OPEN_DRAIN_NO_PULL,
         .priv = NULL
     };
+#endif
 
     mOnoff = state;
-
+#if APP_BOARD_LEDBTN
     if (state) {
         hosal_gpio_output_set(&gpio_led, 1);
     }
     else {
         hosal_gpio_output_set(&gpio_led, 0);
     }
+#endif
 }
 
 bool LEDWidget::GetOnoff(void)
 {
+#if APP_BOARD_LEDBTN
     hosal_gpio_dev_t gpio_led = {
         .port = mPin,
         .config = OUTPUT_OPEN_DRAIN_NO_PULL,
         .priv = NULL
     };
-
+#endif
     return mOnoff ? true: false;
 }
 
 void DimmableLEDWidget::Init()
 {
     light_onoff = light_v = 0;
-
+#if APP_BOARD_LEDBTN
     demo_hosal_pwm_init();
     demo_hosal_pwm_start();
+#endif
 }
 
 void DimmableLEDWidget::SetOnoff(bool state)
@@ -101,15 +102,18 @@ bool DimmableLEDWidget::GetOnoff(void)
 
 void DimmableLEDWidget::SetLevel(uint8_t level)
 {
+#if APP_BOARD_LEDBTN
     set_level(level);
+#endif
 }
 
 void ColorLEDWidget::Init()
 {
     light_onoff = light_v = light_s = light_h = 0;
-
+#if APP_BOARD_LEDBTN
     demo_hosal_pwm_init();
     demo_hosal_pwm_start();
+#endif
 }
 
 void ColorLEDWidget::SetOnoff(bool state)
@@ -124,5 +128,7 @@ void ColorLEDWidget::SetLevel(uint8_t level)
 
 void ColorLEDWidget::SetColor(uint8_t level, uint8_t hue, uint8_t sat) 
 {
+#if APP_BOARD_LEDBTN
     set_color(level, hue, sat);
+#endif
 }

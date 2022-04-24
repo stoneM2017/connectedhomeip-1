@@ -39,11 +39,13 @@
 #define CHIP_UART_PIN_BAUDRATE          2000000
 #define CHIP_UART_RX_BUFFSIZE           256
 
+#if APP_BOARD_LEDBTN
 #define LED1_PIN                        22
 
 #define LED_B_PIN_PORT                  1
 #define LED_B_PIN                       31
 #define MAX_PWM_CHANNEL                 1
+#endif
 
 #define LED_BTN_RESET                   11
 

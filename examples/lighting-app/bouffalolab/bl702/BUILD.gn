@@ -44,6 +44,12 @@ declare_args() {
 
   enable_psram                = true 
 
+#  app_board                   = "iot-evb"
+#  app_chip                    = "bl702"
+
+  app_board                   = "eth-board"
+  app_chip                    = "bl706c-22"
+
   setupPinCode                = 20202021
   setupDiscriminator          = 3840
   OTA_periodic_query_timeout  = 86400
@@ -77,7 +83,6 @@ source_set("shell_common") {
   ]
 }
 
-
 bl702_sdk("sdk") {
 
   include_dirs = [
@@ -93,6 +98,11 @@ bl702_sdk("sdk") {
     "CHIP_DEVICE_CONFIG_USE_TEST_SETUP_DISCRIMINATOR=${setupDiscriminator}",
     "OTA_PERIODIC_TIMEOUT=${OTA_periodic_query_timeout}",
   ]
+
+  if (app_chip == "bl706c-22") {
+    enable_psram = true
+    defines += ["CFG_PSRAM_DUAL_BANK=1"]
+  }
 
   if (enable_psram) {
     defines += ["CFG_USE_PSRAM=1"]
@@ -112,6 +122,13 @@ bl702_executable("lighting_app") {
     "APP_TASK_STACK_SIZE=2044",
     "CONFIG_ENABLE_CHIP_SHELL=${enable_chip_shell}"
   ]
+
+  if (app_board == "eth-board") {
+    defines += ["APP_BOARD_LEDBTN=0"]
+  }
+  else {
+    defines += ["APP_BOARD_LEDBTN=1"]
+  }
 
   sources = [
     "${examples_plat_dir}/LEDWidget.cpp",

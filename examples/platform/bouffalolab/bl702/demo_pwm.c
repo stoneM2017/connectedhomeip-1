@@ -10,6 +10,8 @@
 #include "demo_pwm.h"
 #include "board.h"
 
+#if APP_BOARD_LEDBTN
+
 #define PWM_FREQ            1000
 #define PWM_DUTY_CYCLE      10000
 
@@ -180,3 +182,4 @@ void set_color(uint8_t currLevel, uint8_t currHue, uint8_t currSat)
 
     demo_hosal_pwm_change_param(para);
 }
+#endif
