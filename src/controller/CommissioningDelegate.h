@@ -22,6 +22,7 @@
 #include <credentials/attestation_verifier/DeviceAttestationDelegate.h>
 #include <credentials/attestation_verifier/DeviceAttestationVerifier.h>
 #include <lib/support/Variant.h>
+#include <system/SystemClock.h>
 
 namespace chip {
 namespace Controller {
@@ -74,9 +75,16 @@ struct CompletionStatus
     CHIP_ERROR err;
     Optional<CommissioningStage> failedStage;
     Optional<Credentials::AttestationVerificationResult> attestationResult;
+    Optional<app::Clusters::GeneralCommissioning::CommissioningError> commissioningError;
+    Optional<app::Clusters::NetworkCommissioning::NetworkCommissioningStatus> networkCommissioningStatus;
 };
 
 constexpr uint16_t kDefaultFailsafeTimeout = 60;
+
+// Per spec, all commands that are sent with the failsafe armed need at least
+// a 30s timeout.
+constexpr System::Clock::Timeout kMinimumCommissioningStepTimeout = System::Clock::Seconds16(30);
+
 class CommissioningParameters
 {
 public:
@@ -447,10 +455,24 @@ struct ReadCommissioningInfo
     GeneralCommissioningInfo general;
 };
 
-struct AdditionalErrorInfo
+struct AttestationErrorInfo
 {
-    AdditionalErrorInfo(Credentials::AttestationVerificationResult result) : attestationResult(result) {}
+    AttestationErrorInfo(Credentials::AttestationVerificationResult result) : attestationResult(result) {}
     Credentials::AttestationVerificationResult attestationResult;
+};
+
+struct CommissioningErrorInfo
+{
+    CommissioningErrorInfo(app::Clusters::GeneralCommissioning::CommissioningError result) : commissioningError(result) {}
+    app::Clusters::GeneralCommissioning::CommissioningError commissioningError;
+};
+
+struct NetworkCommissioningStatusInfo
+{
+    NetworkCommissioningStatusInfo(app::Clusters::NetworkCommissioning::NetworkCommissioningStatus result) :
+        networkCommissioningStatus(result)
+    {}
+    app::Clusters::NetworkCommissioning::NetworkCommissioningStatus networkCommissioningStatus;
 };
 
 class CommissioningDelegate
@@ -459,26 +481,27 @@ public:
     virtual ~CommissioningDelegate(){};
     /* CommissioningReport is returned after each commissioning step is completed. The reports for each step are:
      * kReadCommissioningInfo - ReadCommissioningInfo
-     * kArmFailsafe: none
-     * kConfigRegulatory: none
+     * kArmFailsafe: CommissioningErrorInfo if there is an error
+     * kConfigRegulatory: CommissioningErrorInfo if there is an error
      * kSendPAICertificateRequest: RequestedCertificate
      * kSendDACCertificateRequest: RequestedCertificate
      * kSendAttestationRequest: AttestationResponse
-     * kAttestationVerification: AdditionalErrorInfo if there is an error
+     * kAttestationVerification: AttestationErrorInfo if there is an error
      * kSendOpCertSigningRequest: CSRResponse
      * kGenerateNOCChain: NocChain
      * kSendTrustedRootCert: None
      * kSendNOC: none
-     * kWiFiNetworkSetup: none
-     * kThreadNetworkSetup: none
-     * kWiFiNetworkEnable: none
-     * kThreadNetworkEnable: none
+     * kWiFiNetworkSetup: NetworkCommissioningStatusInfo if there is an error
+     * kThreadNetworkSetup: NetworkCommissioningStatusInfo if there is an error
+     * kWiFiNetworkEnable: NetworkCommissioningStatusInfo if there is an error
+     * kThreadNetworkEnable: NetworkCommissioningStatusInfo if there is an error
      * kFindOperational: OperationalNodeFoundData
-     * kSendComplete: none
+     * kSendComplete: CommissioningErrorInfo if there is an error
      * kCleanup: none
      */
-    struct CommissioningReport : Variant<RequestedCertificate, AttestationResponse, CSRResponse, NocChain, OperationalNodeFoundData,
-                                         ReadCommissioningInfo, AdditionalErrorInfo>
+    struct CommissioningReport
+        : Variant<RequestedCertificate, AttestationResponse, CSRResponse, NocChain, OperationalNodeFoundData, ReadCommissioningInfo,
+                  AttestationErrorInfo, CommissioningErrorInfo, NetworkCommissioningStatusInfo>
     {
         CommissioningReport() : stageCompleted(CommissioningStage::kError) {}
         CommissioningStage stageCompleted;

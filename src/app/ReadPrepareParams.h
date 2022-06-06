@@ -48,13 +48,15 @@ struct ReadPrepareParams
     size_t mAttributePathParamsListSize             = 0;
     DataVersionFilter * mpDataVersionFilterList     = nullptr;
     size_t mDataVersionFilterListSize               = 0;
-    EventNumber mEventNumber                        = 0;
-    System::Clock::Timeout mTimeout                 = kImMessageTimeout;
-    uint16_t mMinIntervalFloorSeconds               = 0;
-    uint16_t mMaxIntervalCeilingSeconds             = 0;
-    bool mKeepSubscriptions                         = false;
-    bool mIsFabricFiltered                          = true;
-    OnResubscribePolicyCB mResubscribePolicy        = nullptr;
+    Optional<EventNumber> mEventNumber;
+    // The timeout for waiting for the response or System::Clock::kZero to let the interaction model decide the timeout based on the
+    // MRP timeouts of the session.
+    System::Clock::Timeout mTimeout          = System::Clock::kZero;
+    uint16_t mMinIntervalFloorSeconds        = 0;
+    uint16_t mMaxIntervalCeilingSeconds      = 0;
+    bool mKeepSubscriptions                  = false;
+    bool mIsFabricFiltered                   = true;
+    OnResubscribePolicyCB mResubscribePolicy = nullptr;
 
     ReadPrepareParams() {}
     ReadPrepareParams(const SessionHandle & sessionHandle) { mSessionHolder.Grab(sessionHandle); }

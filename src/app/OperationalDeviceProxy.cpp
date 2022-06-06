@@ -55,28 +55,35 @@ void OperationalDeviceProxy::MoveToState(State aTargetState)
                       ChipLogValueX64(mPeerId.GetCompressedFabricId()), ChipLogValueX64(mPeerId.GetNodeId()), to_underlying(mState),
                       to_underlying(aTargetState));
         mState = aTargetState;
+
+        if (aTargetState != State::Connecting)
+        {
+            CleanupCASEClient();
+        }
     }
 }
 
 bool OperationalDeviceProxy::AttachToExistingSecureSession()
 {
-    VerifyOrReturnError(mState == State::NeedsAddress || mState == State::Initialized, false);
+    VerifyOrReturnError(mState == State::NeedsAddress || mState == State::ResolvingAddress || mState == State::HasAddress, false);
 
     ScopedNodeId peerNodeId(mPeerId.GetNodeId(), mFabricInfo->GetFabricIndex());
-    auto sessionHandle = mInitParams.sessionManager->FindSecureSessionForNode(peerNodeId, Transport::SecureSession::Type::kCASE);
-    if (sessionHandle.HasValue())
-    {
-        ChipLogProgress(Controller, "Found an existing secure session to [" ChipLogFormatX64 "-" ChipLogFormatX64 "]!",
-                        ChipLogValueX64(mPeerId.GetCompressedFabricId()), ChipLogValueX64(mPeerId.GetNodeId()));
-        mSecureSession.Grab(sessionHandle.Value());
-        return true;
-    }
+    auto sessionHandle =
+        mInitParams.sessionManager->FindSecureSessionForNode(peerNodeId, MakeOptional(Transport::SecureSession::Type::kCASE));
+    if (!sessionHandle.HasValue())
+        return false;
 
-    return false;
+    ChipLogProgress(Controller, "Found an existing secure session to [" ChipLogFormatX64 "-" ChipLogFormatX64 "]!",
+                    ChipLogValueX64(mPeerId.GetCompressedFabricId()), ChipLogValueX64(mPeerId.GetNodeId()));
+    mDeviceAddress = sessionHandle.Value()->AsSecureSession()->GetPeerAddress();
+    if (!mSecureSession.Grab(sessionHandle.Value()))
+        return false;
+
+    return true;
 }
 
-CHIP_ERROR OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected> * onConnection,
-                                           Callback::Callback<OnDeviceConnectionFailure> * onFailure)
+void OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected> * onConnection,
+                                     Callback::Callback<OnDeviceConnectionFailure> * onFailure)
 {
     CHIP_ERROR err   = CHIP_NO_ERROR;
     bool isConnected = false;
@@ -98,12 +105,25 @@ CHIP_ERROR OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected>
         isConnected = AttachToExistingSecureSession();
         if (!isConnected)
         {
+            // LookupPeerAddress could perhaps call back with a result
+            // synchronously, so do our state update first.
+            MoveToState(State::ResolvingAddress);
             err = LookupPeerAddress();
+            if (err != CHIP_NO_ERROR)
+            {
+                // Roll back the state change, since we are presumably not in
+                // the middle of a lookup.
+                MoveToState(State::NeedsAddress);
+            }
         }
 
         break;
 
-    case State::Initialized:
+    case State::ResolvingAddress:
+        isConnected = AttachToExistingSecureSession();
+        break;
+
+    case State::HasAddress:
         isConnected = AttachToExistingSecureSession();
         if (!isConnected)
         {
@@ -137,14 +157,14 @@ CHIP_ERROR OperationalDeviceProxy::Connect(Callback::Callback<OnDeviceConnected>
     {
         DequeueConnectionCallbacks(err);
     }
-
-    return err;
 }
 
-CHIP_ERROR OperationalDeviceProxy::UpdateDeviceData(const Transport::PeerAddress & addr,
-                                                    const ReliableMessageProtocolConfig & config)
+void OperationalDeviceProxy::UpdateDeviceData(const Transport::PeerAddress & addr, const ReliableMessageProtocolConfig & config)
 {
-    VerifyOrReturnLogError(mState != State::Uninitialized, CHIP_ERROR_INCORRECT_STATE);
+    if (mState == State::Uninitialized)
+    {
+        return;
+    }
 
 #if CHIP_DETAIL_LOGGING
     char peerAddrBuff[Transport::PeerAddress::kMaxToStringSize];
@@ -156,18 +176,18 @@ CHIP_ERROR OperationalDeviceProxy::UpdateDeviceData(const Transport::PeerAddress
     CHIP_ERROR err = CHIP_NO_ERROR;
     mDeviceAddress = addr;
 
-    mMRPConfig = config;
+    mRemoteMRPConfig = config;
 
     // Initialize CASE session state with any MRP parameters that DNS-SD has provided.
     // It can be overridden by CASE session protocol messages that include MRP parameters.
     if (mCASEClient)
     {
-        mCASEClient->SetMRPIntervals(mMRPConfig);
+        mCASEClient->SetRemoteMRPIntervals(mRemoteMRPConfig);
     }
 
-    if (mState == State::NeedsAddress)
+    if (mState == State::ResolvingAddress)
     {
-        MoveToState(State::Initialized);
+        MoveToState(State::HasAddress);
         err = EstablishConnection();
         if (err != CHIP_NO_ERROR)
         {
@@ -179,28 +199,14 @@ CHIP_ERROR OperationalDeviceProxy::UpdateDeviceData(const Transport::PeerAddress
         if (!mSecureSession)
         {
             // Nothing needs to be done here.  It's not an error to not have a
-            // secureSession.  For one thing, we could have gotten an different
+            // secureSession.  For one thing, we could have gotten a different
             // UpdateAddress already and that caused connections to be torn down and
             // whatnot.
-            return CHIP_NO_ERROR;
+            return;
         }
 
-        mSecureSession.Get()->AsSecureSession()->SetPeerAddress(addr);
+        mSecureSession.Get().Value()->AsSecureSession()->SetPeerAddress(addr);
     }
-
-    return err;
-}
-
-bool OperationalDeviceProxy::GetAddress(Inet::IPAddress & addr, uint16_t & port) const
-{
-    if (mState == State::Uninitialized || mState == State::NeedsAddress)
-    {
-        return false;
-    }
-
-    addr = mDeviceAddress.GetIPAddress();
-    port = mDeviceAddress.GetPort();
-    return true;
 }
 
 CHIP_ERROR OperationalDeviceProxy::EstablishConnection()
@@ -209,9 +215,13 @@ CHIP_ERROR OperationalDeviceProxy::EstablishConnection()
         CASEClientInitParams{ mInitParams.sessionManager, mInitParams.sessionResumptionStorage, mInitParams.exchangeMgr,
                               mFabricInfo, mInitParams.groupDataProvider, mInitParams.mrpLocalConfig });
     ReturnErrorCodeIf(mCASEClient == nullptr, CHIP_ERROR_NO_MEMORY);
-    CHIP_ERROR err =
-        mCASEClient->EstablishSession(mPeerId, mDeviceAddress, mMRPConfig, HandleCASEConnected, HandleCASEConnectionFailure, this);
-    ReturnErrorOnFailure(err);
+
+    CHIP_ERROR err = mCASEClient->EstablishSession(mPeerId, mDeviceAddress, mRemoteMRPConfig, this);
+    if (err != CHIP_NO_ERROR)
+    {
+        CleanupCASEClient();
+        return err;
+    }
 
     MoveToState(State::Connecting);
 
@@ -273,52 +283,35 @@ void OperationalDeviceProxy::DequeueConnectionCallbacks(CHIP_ERROR error)
     }
 }
 
-void OperationalDeviceProxy::HandleCASEConnectionFailure(void * context, CASEClient * client, CHIP_ERROR error)
+void OperationalDeviceProxy::OnSessionEstablishmentError(CHIP_ERROR error)
 {
-    OperationalDeviceProxy * device = static_cast<OperationalDeviceProxy *>(context);
-    VerifyOrReturn(device->mState != State::Uninitialized && device->mState != State::NeedsAddress,
+    VerifyOrReturn(mState != State::Uninitialized && mState != State::NeedsAddress,
                    ChipLogError(Controller, "HandleCASEConnectionFailure was called while the device was not initialized"));
-    VerifyOrReturn(client == device->mCASEClient, ChipLogError(Controller, "HandleCASEConnectionFailure for unknown CASEClient"));
 
     //
     // We don't need to reset the state all the way back to NeedsAddress since all that transpired
     // was just CASE connection failure. So let's re-use the cached address to re-do CASE again
     // if need-be.
     //
-    device->MoveToState(State::Initialized);
+    MoveToState(State::HasAddress);
 
-    device->CloseCASESession();
-    device->DequeueConnectionCallbacks(error);
+    DequeueConnectionCallbacks(error);
 
-    //
-    // Do not touch device instance anymore; it might have been destroyed by a failure
-    // callback.
-    //
+    // Do not touch device instance anymore; it might have been destroyed by a failure callback.
 }
 
-void OperationalDeviceProxy::HandleCASEConnected(void * context, CASEClient * client)
+void OperationalDeviceProxy::OnSessionEstablished(const SessionHandle & session)
 {
-    OperationalDeviceProxy * device = static_cast<OperationalDeviceProxy *>(context);
-    VerifyOrReturn(device->mState != State::Uninitialized,
+    VerifyOrReturn(mState != State::Uninitialized,
                    ChipLogError(Controller, "HandleCASEConnected was called while the device was not initialized"));
-    VerifyOrReturn(client == device->mCASEClient, ChipLogError(Controller, "HandleCASEConnected for unknown CASEClient"));
 
-    CHIP_ERROR err = client->DeriveSecureSessionHandle(device->mSecureSession);
-    if (err != CHIP_NO_ERROR)
-    {
-        device->HandleCASEConnectionFailure(context, client, err);
-    }
-    else
-    {
-        device->MoveToState(State::SecureConnected);
-        device->CloseCASESession();
-        device->DequeueConnectionCallbacks(CHIP_NO_ERROR);
-    }
+    if (!mSecureSession.Grab(session))
+        return; // Got an invalid session, do not change any state
 
-    //
-    // Do not touch this instance anymore; it might have been destroyed by a
-    // callback.
-    //
+    MoveToState(State::SecureConnected);
+    DequeueConnectionCallbacks(CHIP_NO_ERROR);
+
+    // Do not touch this instance anymore; it might have been destroyed by a callback.
 }
 
 CHIP_ERROR OperationalDeviceProxy::Disconnect()
@@ -326,30 +319,14 @@ CHIP_ERROR OperationalDeviceProxy::Disconnect()
     ReturnErrorCodeIf(mState != State::SecureConnected, CHIP_ERROR_INCORRECT_STATE);
     if (mSecureSession)
     {
-        mInitParams.sessionManager->ExpirePairing(mSecureSession.Get());
+        mInitParams.sessionManager->ExpirePairing(mSecureSession.Get().Value());
     }
-    MoveToState(State::Initialized);
-    if (mCASEClient)
-    {
-        mInitParams.clientPool->Release(mCASEClient);
-        mCASEClient = nullptr;
-    }
+    MoveToState(State::HasAddress);
+
     return CHIP_NO_ERROR;
 }
 
-void OperationalDeviceProxy::Clear()
-{
-    if (mCASEClient)
-    {
-        mInitParams.clientPool->Release(mCASEClient);
-        mCASEClient = nullptr;
-    }
-
-    MoveToState(State::Uninitialized);
-    mInitParams = DeviceProxyInitParams();
-}
-
-void OperationalDeviceProxy::CloseCASESession()
+void OperationalDeviceProxy::CleanupCASEClient()
 {
     if (mCASEClient)
     {
@@ -360,7 +337,17 @@ void OperationalDeviceProxy::CloseCASESession()
 
 void OperationalDeviceProxy::OnSessionReleased()
 {
-    MoveToState(State::Initialized);
+    MoveToState(State::HasAddress);
+}
+
+void OperationalDeviceProxy::OnFirstMessageDeliveryFailed()
+{
+    LookupPeerAddress();
+}
+
+void OperationalDeviceProxy::OnSessionHang()
+{
+    // TODO: establish a new session
 }
 
 CHIP_ERROR OperationalDeviceProxy::ShutdownSubscriptions()
@@ -392,6 +379,9 @@ OperationalDeviceProxy::~OperationalDeviceProxy()
 
 CHIP_ERROR OperationalDeviceProxy::LookupPeerAddress()
 {
+    // NOTE: This is public API that can be used to update our stored peer
+    // address even when we are in State::Connected, so we do not make any
+    // MoveToState calls in this method.
     if (mAddressLookupHandle.IsActive())
     {
         ChipLogProgress(Discovery, "Operational node lookup already in progress. Will NOT start a new one.");
@@ -412,6 +402,11 @@ void OperationalDeviceProxy::OnNodeAddressResolutionFailed(const PeerId & peerId
 {
     ChipLogError(Discovery, "Operational discovery failed for 0x" ChipLogFormatX64 ": %" CHIP_ERROR_FORMAT,
                  ChipLogValueX64(peerId.GetNodeId()), reason.Format());
+
+    if (IsResolvingAddress())
+    {
+        MoveToState(State::NeedsAddress);
+    }
 
     DequeueConnectionCallbacks(reason);
 }

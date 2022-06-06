@@ -24,6 +24,7 @@
 #include "media-input-server.h"
 #include "media-input-delegate.h"
 
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <app/AttributeAccessInterface.h>
 #include <app/CommandHandler.h>
 #include <app/ConcreteCommandPath.h>
@@ -57,7 +58,7 @@ bool isDelegateNull(Delegate * delegate, EndpointId endpoint)
 {
     if (delegate == nullptr)
     {
-        ChipLogError(Zcl, "Media Input has no delegate set for endpoint:%" PRIu16, endpoint);
+        ChipLogProgress(Zcl, "Media Input has no delegate set for endpoint:%u", endpoint);
         return true;
     }
     return false;
@@ -79,6 +80,20 @@ void SetDefaultDelegate(EndpointId endpoint, Delegate * delegate)
     else
     {
     }
+}
+
+bool HasFeature(chip::EndpointId endpoint, MediaInputFeature feature)
+{
+    bool hasFeature     = false;
+    uint32_t featureMap = 0;
+
+    EmberAfStatus status = Attributes::FeatureMap::Get(endpoint, &featureMap);
+    if (EMBER_ZCL_STATUS_SUCCESS == status)
+    {
+        hasFeature = (featureMap & chip::to_underlying(feature));
+    }
+
+    return hasFeature;
 }
 
 } // namespace MediaInput
@@ -232,15 +247,20 @@ bool emberAfMediaInputClusterRenameInputCallback(app::CommandHandler * command, 
     VerifyOrExit(isDelegateNull(delegate, endpoint) != true, err = CHIP_ERROR_INCORRECT_STATE);
 
 exit:
-    if (err != CHIP_NO_ERROR)
+    if (HasFeature(endpoint, MediaInputFeature::kNameUpdates) && err == CHIP_NO_ERROR)
     {
-        ChipLogError(Zcl, "emberAfMediaInputClusterRenameInputCallback error: %s", err.AsString());
-        emberAfSendImmediateDefaultResponse(EMBER_ZCL_STATUS_FAILURE);
+        bool success = delegate->HandleRenameInput(index, name);
+        Protocols::InteractionModel::Status status =
+            success ? Protocols::InteractionModel::Status::Success : Protocols::InteractionModel::Status::Failure;
+        command->AddStatus(commandPath, status);
+    }
+    else
+    {
+        err != CHIP_NO_ERROR ? ChipLogError(Zcl, "emberAfMediaInputClusterRenameInputCallback error: %s", err.AsString())
+                             : ChipLogError(Zcl, "MediaInput no name updates feature");
+        command->AddStatus(commandPath, Protocols::InteractionModel::Status::Failure);
     }
 
-    bool success         = delegate->HandleRenameInput(index, name);
-    EmberAfStatus status = success ? EMBER_ZCL_STATUS_SUCCESS : EMBER_ZCL_STATUS_FAILURE;
-    emberAfSendImmediateDefaultResponse(status);
     return true;
 }
 

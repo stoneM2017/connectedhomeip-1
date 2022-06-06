@@ -65,7 +65,7 @@ tests:
     ### Step 2x ->  Check GoToLiftPercentage 25% Long-Run effects
     - label: "2a: TH sends GoToLiftPercentage command with 25 percent to DUT"
       command: "GoToLiftPercentage"
-      PICS: "WNCV_LF && PICS_CR_GOTOLIFTPERCENTAGE"
+      PICS: "WNCV_LF && CR_GOTOLIFTPERCENTAGE"
       arguments:
           values:
               - name: "liftPercent100thsValue"
@@ -113,7 +113,6 @@ tests:
     - label:
           "3c: If (PA & LF) TH reads CurrentPositionLiftPercent100ths attribute
           from DUT"
-      disabled: true
       command: "readAttribute"
       attribute: "CurrentPositionLiftPercent100ths"
       PICS: "WNCV_PA_LF && WNCV_LF"
@@ -125,7 +124,6 @@ tests:
           "3d: If (PA & LF) TH reads CurrentPositionLiftPercentage optional
           attribute from DUT"
       command: "readAttribute"
-      disabled: true
       attribute: "CurrentPositionLiftPercentage"
       PICS: "WNCV_PA_LF && WNCV_LF && A_CURRENTPOSITIONLIFTPERCENTAGE"
       response:
@@ -135,7 +133,7 @@ tests:
     ### Step 4x ->  Check GoToLiftPercentage 75.20% Long-Run effects
     - label: "4a: TH sends GoToLiftPercentage command with 75.20 percent to DUT"
       command: "GoToLiftPercentage"
-      PICS: "WNCV_LF && PICS_CR_GOTOLIFTPERCENTAGE"
+      PICS: "WNCV_LF && CR_GOTOLIFTPERCENTAGE"
       arguments:
           values:
               - name: "liftPercent100thsValue"
@@ -156,7 +154,6 @@ tests:
     - label:
           "4c: If (PA & LF) TH reads TargetPositionLiftPercent100ths attribute
           from DUT"
-      disabled: true
       command: "readAttribute"
       attribute: "TargetPositionLiftPercent100ths"
       PICS: "WNCV_PA_LF && WNCV_LF"
@@ -184,7 +181,6 @@ tests:
     - label:
           "5c: If (PA & LF) TH reads CurrentPositionLiftPercent100ths attribute
           from DUT"
-      disabled: true
       command: "readAttribute"
       attribute: "CurrentPositionLiftPercent100ths"
       PICS: "WNCV_PA_LF && WNCV_LF"
@@ -195,7 +191,6 @@ tests:
     - label:
           "5d: If (PA & LF) TH reads CurrentPositionLiftPercentage optional
           attribute from DUT"
-      disabled: true
       PICS: "WNCV_PA_LF && WNCV_LF && A_CURRENTPOSITIONLIFTPERCENTAGE"
       command: "readAttribute"
       attribute: "CurrentPositionLiftPercentage"

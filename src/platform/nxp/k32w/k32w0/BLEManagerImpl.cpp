@@ -127,7 +127,7 @@ TimerHandle_t connectionTimeout;
 EventGroupHandle_t bleAppTaskLoopEvent;
 
 /* keep the device ID of the connected peer */
-uint8_t device_id;
+uint8_t g_device_id;
 
 const uint8_t ShortUUID_CHIPoBLEService[]  = { 0xF6, 0xFF };
 const ChipBleUUID ChipUUID_CHIPoBLEChar_RX = { { 0x18, 0xEE, 0x2E, 0xF5, 0x26, 0x3D, 0x45, 0x59, 0x95, 0x9F, 0x4F, 0x9C, 0x42, 0x9F,
@@ -184,7 +184,6 @@ CHIP_ERROR BLEManagerImpl::_Init()
     VerifyOrExit(bleAppCreated == pdPASS, err = CHIP_ERROR_INCORRECT_STATE);
 
     /* BLE Radio Init */
-    XCVR_TemperatureUpdate(BOARD_GetTemperature());
     VerifyOrExit(XCVR_Init(BLE_MODE, DR_2MBPS) == gXcvrSuccess_c, err = CHIP_ERROR_INCORRECT_STATE);
 
     /* Create BLE Controller Task */
@@ -243,6 +242,11 @@ uint16_t BLEManagerImpl::_NumConnections(void)
 bool BLEManagerImpl::_IsAdvertisingEnabled(void)
 {
     return mFlags.Has(Flags::kAdvertisingEnabled);
+}
+
+bool BLEManagerImpl::_IsAdvertising(void)
+{
+    return mFlags.Has(Flags::kAdvertising);
 }
 
 bool BLEManagerImpl::RemoveConnection(uint8_t connectionHandle)
@@ -786,8 +790,8 @@ CHIP_ERROR BLEManagerImpl::ConfigureAdvertisingData(void)
     uint16_t discriminator;
     uint16_t advInterval                                  = 0;
     gapAdvertisingData_t adv                              = { 0 };
-    gapAdStructure_t adv_data[BLEKW_ADV_MAX_NO]           = { 0 };
-    gapAdStructure_t scan_rsp_data[BLEKW_SCAN_RSP_MAX_NO] = { 0 };
+    gapAdStructure_t adv_data[BLEKW_ADV_MAX_NO]           = { { 0 } };
+    gapAdStructure_t scan_rsp_data[BLEKW_SCAN_RSP_MAX_NO] = { { 0 } };
     uint8_t advPayload[BLEKW_MAX_ADV_DATA_LEN]            = { 0 };
     gapScanResponseData_t scanRsp                         = { 0 };
     gapAdvertisingParameters_t adv_params                 = { 0 };
@@ -1010,7 +1014,7 @@ void BLEManagerImpl::bleAppTask(void * p_arg)
 
             if (msg->type == BLE_KW_MSG_ERROR)
             {
-                ChipLogProgress(DeviceLayer, "BLE Fatal Error: %d.\n", msg->data.u8);
+                ChipLogProgress(DeviceLayer, "BLE Error: %d.\n", msg->data.u8);
             }
             else if (msg->type == BLE_KW_MSG_CONNECTED)
             {
@@ -1035,7 +1039,7 @@ void BLEManagerImpl::bleAppTask(void * p_arg)
                 ChipLogProgress(DeviceLayer, "BLE connection timeout: Forcing disconnection.");
 
                 /* Set the advertising parameters */
-                if (Gap_Disconnect(device_id) != gBleSuccess_c)
+                if (Gap_Disconnect(g_device_id) != gBleSuccess_c)
                 {
                     ChipLogProgress(DeviceLayer, "Gap_Disconnect() failed.");
                 }
@@ -1053,7 +1057,7 @@ void BLEManagerImpl::HandleConnectEvent(blekw_msg_t * msg)
     uint8_t device_id_loc = msg->data.u8;
     ChipLogProgress(DeviceLayer, "BLE is connected with device: %d.\n", device_id_loc);
 
-    device_id = device_id_loc;
+    g_device_id = device_id_loc;
     blekw_start_connection_timeout();
     sInstance.AddConnection(device_id_loc);
     mFlags.Set(Flags::kRestartAdvertising);
@@ -1183,7 +1187,7 @@ void BLEManagerImpl::HandleRXCharWrite(blekw_msg_t * msg)
 #if CHIP_DEVICE_CHIP0BLE_DEBUG
     ChipLogDetail(DeviceLayer,
                   "Write request/command received for"
-                  "CHIPoBLE RX characteristic (con %" PRIu16 ", len %" PRIu16 ")",
+                  "CHIPoBLE RX characteristic (con %u, len %u)",
                   att_wr_data->device_id, buf->DataLength());
 #endif
 
@@ -1276,6 +1280,11 @@ void BLEManagerImpl::blekw_gap_connection_cb(deviceId_t deviceId, gapConnectionE
 
     if (pConnectionEvent->eventType == gConnEvtConnected_c)
     {
+        ChipLogProgress(DeviceLayer, "BLE K32W: Trying to set the PHY to 2M");
+
+        (void) Gap_LeSetPhy(FALSE, deviceId, 0, gConnPhyUpdateReqTxPhySettings_c, gConnPhyUpdateReqRxPhySettings_c,
+                            (uint16_t) gConnPhyUpdateReqPhyOptions_c);
+
         /* Notify App Task that the BLE is connected now */
         (void) blekw_msg_add_u8(BLE_KW_MSG_CONNECTED, (uint8_t) deviceId);
 #if defined(cPWR_UsePowerDownMode) && (cPWR_UsePowerDownMode)

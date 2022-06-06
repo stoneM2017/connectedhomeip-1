@@ -33,6 +33,7 @@
 #include <platform/ConnectivityManager.h>
 #include <platform/KeyValueStoreManager.h>
 #include <platform/internal/BLEManager.h>
+#include <trace/trace.h>
 
 #include "AndroidChipPlatform-JNI.h"
 #include "BLEManagerImpl.h"
@@ -82,6 +83,8 @@ CHIP_ERROR AndroidChipPlatformJNI_OnLoad(JavaVM * jvm, void * reserved)
                                                    sAndroidChipPlatformExceptionCls);
     SuccessOrExit(err);
     ChipLogProgress(DeviceLayer, "Java class references loaded.");
+
+    chip::InitializeTracing();
 
 exit:
     if (err != CHIP_NO_ERROR)
@@ -235,11 +238,11 @@ JNI_METHOD(void, nativeSetServiceResolver)(JNIEnv * env, jclass self, jobject re
 }
 
 JNI_MDNSCALLBACK_METHOD(void, handleServiceResolve)
-(JNIEnv * env, jclass self, jstring instanceName, jstring serviceType, jstring address, jint port, jlong callbackHandle,
- jlong contextHandle)
+(JNIEnv * env, jclass self, jstring instanceName, jstring serviceType, jstring address, jint port, jobject attributes,
+ jlong callbackHandle, jlong contextHandle)
 {
     using ::chip::Dnssd::HandleResolve;
-    HandleResolve(instanceName, serviceType, address, port, callbackHandle, contextHandle);
+    HandleResolve(instanceName, serviceType, address, port, attributes, callbackHandle, contextHandle);
 }
 
 #if CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE

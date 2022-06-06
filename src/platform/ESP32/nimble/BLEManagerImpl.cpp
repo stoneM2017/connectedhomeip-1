@@ -33,8 +33,9 @@
 #include <ble/CHIPBleServiceData.h>
 #include <lib/support/CodeUtils.h>
 #include <lib/support/logging/CHIPLogging.h>
-#include <platform/internal/BLEManager.h>
 #include <platform/CommissionableDataProvider.h>
+#include <platform/DeviceInstanceInfoProvider.h>
+#include <platform/internal/BLEManager.h>
 #include <setup_payload/AdditionalDataPayloadGenerator.h>
 #include <system/SystemTimer.h>
 
@@ -493,7 +494,7 @@ void BLEManagerImpl::DriveBLEState(void)
 
         // Add delay of 500msec while NimBLE host task gets up and running
         {
-            vTaskDelay(500 / portTICK_RATE_MS);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
         }
     }
 
@@ -802,7 +803,7 @@ void BLEManagerImpl::HandleTXCharCCCDWrite(struct ble_gap_event * gapEvent)
     bool notificationsEnabled;
 
     ChipLogProgress(DeviceLayer,
-                    "Write request/command received for CHIPoBLE TX CCCD characteristic (con %" PRIu16
+                    "Write request/command received for CHIPoBLE TX CCCD characteristic (con %u"
                     " ) indicate = %d notify = %d",
                     gapEvent->subscribe.conn_handle, gapEvent->subscribe.cur_indicate, gapEvent->subscribe.cur_notify);
 
@@ -855,7 +856,7 @@ exit:
 
 CHIP_ERROR BLEManagerImpl::HandleTXComplete(struct ble_gap_event * gapEvent)
 {
-    ChipLogProgress(DeviceLayer, "Confirm received for CHIPoBLE TX characteristic indication (con %" PRIu16 ") status= %d ",
+    ChipLogProgress(DeviceLayer, "Confirm received for CHIPoBLE TX characteristic indication (con %u) status= %d ",
                     gapEvent->notify_tx.conn_handle, gapEvent->notify_tx.status);
 
     // Signal the BLE Layer that the outstanding indication is complete.
@@ -897,7 +898,7 @@ uint16_t BLEManagerImpl::_NumConnections(void)
 CHIP_ERROR BLEManagerImpl::HandleGAPConnect(struct ble_gap_event * gapEvent)
 {
     CHIP_ERROR err = CHIP_NO_ERROR;
-    ChipLogProgress(DeviceLayer, "BLE GAP connection established (con %" PRIu16 ")", gapEvent->connect.conn_handle);
+    ChipLogProgress(DeviceLayer, "BLE GAP connection established (con %u)", gapEvent->connect.conn_handle);
 
     // Track the number of active GAP connections.
     mNumGAPCons++;
@@ -914,8 +915,8 @@ exit:
 
 CHIP_ERROR BLEManagerImpl::HandleGAPDisconnect(struct ble_gap_event * gapEvent)
 {
-    ChipLogProgress(DeviceLayer, "BLE GAP connection terminated (con %" PRIu16 " reason 0x%02x)",
-                    gapEvent->disconnect.conn.conn_handle, gapEvent->disconnect.reason);
+    ChipLogProgress(DeviceLayer, "BLE GAP connection terminated (con %u reason 0x%02x)", gapEvent->disconnect.conn.conn_handle,
+                    gapEvent->disconnect.reason);
 
     // Update the number of GAP connections.
     if (mNumGAPCons > 0)
@@ -1076,7 +1077,7 @@ void BLEManagerImpl::HandleC3CharRead(struct ble_gatt_char_context * param)
     uint8_t rotatingDeviceIdUniqueId[ConfigurationManager::kRotatingDeviceIDUniqueIDLength] = {};
     MutableByteSpan rotatingDeviceIdUniqueIdSpan(rotatingDeviceIdUniqueId);
 
-    err = ConfigurationMgr().GetRotatingDeviceIdUniqueId(rotatingDeviceIdUniqueIdSpan);
+    err = DeviceLayer::GetDeviceInstanceInfoProvider()->GetRotatingDeviceIdUniqueId(rotatingDeviceIdUniqueIdSpan);
     SuccessOrExit(err);
     err = ConfigurationMgr().GetLifetimeCounter(additionalDataPayloadParams.rotatingDeviceIdLifetimeCounter);
     SuccessOrExit(err);

@@ -44,11 +44,21 @@
 #endif /* CHIP_ENABLE_OPENTHREAD */
 #endif /* defined(SL_WIFI) */
 
-#define CHIP_DEVICE_CONFIG_ENABLE_EXTENDED_DISCOVERY 1
-
 #define CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE 1
 
 #define CHIP_DEVICE_CONFIG_ENABLE_CHIP_TIME_SERVICE_TIME_SYNC 0
+
+#if defined(RS911X_WIFI)
+
+#if defined(WIFI_IPV4_DISABLED)
+#define CHIP_DEVICE_CONFIG_ENABLE_IPV4 0
+#define CHIP_DEVICE_CONFIG_ENABLE_IPV6 1
+#else
+#define CHIP_DEVICE_CONFIG_ENABLE_IPV4 1
+#define CHIP_DEVICE_CONFIG_ENABLE_IPV6 1
+#endif
+
+#endif
 
 // ========== Platform-specific Configuration =========
 

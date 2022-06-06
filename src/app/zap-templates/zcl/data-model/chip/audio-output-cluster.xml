@@ -32,7 +32,7 @@ limitations under the License.
       <arg name="index" type="INT8U"/>
     </command>
 
-    <command source="client" code="0x01" name="RenameOutput" optional="false">
+    <command source="client" code="0x01" name="RenameOutput" optional="true">
       <description>Upon receipt, this SHALL rename the output at a specific index in the Output List. Updates to the output name SHALL appear in the TV settings menus.</description>
       <arg name="index" type="INT8U"/>
       <arg name="name" type="CHAR_STRING"/>
@@ -57,7 +57,7 @@ limitations under the License.
     <item name="Other" value="0x05"/>
   </enum>
 
-  <bitmap name="AudiouOutputFeature" type="BITMAP32">
+  <bitmap name="AudioOutputFeature" type="BITMAP32">
     <cluster code="0x050b"/>
     <field name="NameUpdates" mask="0x1"/>
   </bitmap>

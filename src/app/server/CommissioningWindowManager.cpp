@@ -56,6 +56,9 @@ void CommissioningWindowManager::OnPlatformEvent(const DeviceLayer::ChipDeviceEv
         mCommissioningTimeoutTimerArmed = false;
         Cleanup();
         mServer->GetSecureSessionManager().ExpireAllPASEPairings();
+#if CONFIG_NETWORK_LAYER_BLE
+        mServer->GetBleLayerObject()->CloseAllBleConnections();
+#endif
     }
     else if (event->Type == DeviceLayer::DeviceEventType::kFailSafeTimerExpired)
     {
@@ -65,7 +68,7 @@ void CommissioningWindowManager::OnPlatformEvent(const DeviceLayer::ChipDeviceEv
     else if (event->Type == DeviceLayer::DeviceEventType::kOperationalNetworkEnabled)
     {
         app::DnssdServer::Instance().AdvertiseOperational();
-        ChipLogError(AppServer, "Operational advertising enabled");
+        ChipLogProgress(AppServer, "Operational advertising enabled");
     }
 }
 
@@ -144,19 +147,9 @@ void CommissioningWindowManager::OnSessionEstablishmentStarted()
     DeviceLayer::SystemLayer().StartTimer(kPASESessionEstablishmentTimeout, HandleSessionEstablishmentTimeout, this);
 }
 
-void CommissioningWindowManager::OnSessionEstablished()
+void CommissioningWindowManager::OnSessionEstablished(const SessionHandle & session)
 {
     DeviceLayer::SystemLayer().CancelTimer(HandleSessionEstablishmentTimeout, this);
-    SessionHolder sessionHolder;
-    CHIP_ERROR err = mServer->GetSecureSessionManager().NewPairing(
-        sessionHolder, Optional<Transport::PeerAddress>::Value(mPairingSession.GetPeerAddress()), mPairingSession.GetPeerNodeId(),
-        &mPairingSession, CryptoContext::SessionRole::kResponder, 0);
-    if (err != CHIP_NO_ERROR)
-    {
-        ChipLogError(AppServer, "Commissioning failed while setting up secure channel: err %s", ErrorStr(err));
-        OnSessionEstablishmentError(err);
-        return;
-    }
 
     ChipLogProgress(AppServer, "Commissioning completed session establishment step");
     if (mAppDelegate != nullptr)
@@ -177,7 +170,7 @@ void CommissioningWindowManager::OnSessionEstablished()
     }
     else
     {
-        err = failSafeContext.ArmFailSafe(kUndefinedFabricId, System::Clock::Seconds16(60));
+        CHIP_ERROR err = failSafeContext.ArmFailSafe(kUndefinedFabricId, System::Clock::Seconds16(60));
         if (err != CHIP_NO_ERROR)
         {
             ChipLogError(AppServer, "Error arming failsafe on PASE session establishment completion");
@@ -189,11 +182,12 @@ void CommissioningWindowManager::OnSessionEstablished()
 
 CHIP_ERROR CommissioningWindowManager::OpenCommissioningWindow(Seconds16 commissioningTimeout)
 {
-    VerifyOrReturnError(commissioningTimeout <= MaxCommissioningTimeout() &&
-                            commissioningTimeout >= mMinCommissioningTimeoutOverride.ValueOr(MinCommissioningTimeout()),
+    VerifyOrReturnError(commissioningTimeout <= MaxCommissioningTimeout() && commissioningTimeout >= MinCommissioningTimeout(),
                         CHIP_ERROR_INVALID_ARGUMENT);
     DeviceLayer::FailSafeContext & failSafeContext = DeviceLayer::DeviceControlServer::DeviceControlSvr().GetFailSafeContext();
     VerifyOrReturnError(!failSafeContext.IsFailSafeArmed(), CHIP_ERROR_INCORRECT_STATE);
+
+    ReturnErrorOnFailure(Dnssd::ServiceAdvertiser::Instance().UpdateCommissionableInstanceName());
 
     ReturnErrorOnFailure(DeviceLayer::SystemLayer().StartTimer(commissioningTimeout, HandleCommissioningWindowTimeout, this));
 
@@ -308,6 +302,15 @@ void CommissioningWindowManager::CloseCommissioningWindow()
 {
     if (mWindowStatus != AdministratorCommissioning::CommissioningWindowStatus::kWindowNotOpen)
     {
+#if CONFIG_NETWORK_LAYER_BLE
+        if (mListeningForPASE)
+        {
+            // We never established PASE, so never armed a fail-safe and hence
+            // can't rely on it expiring to close our BLE connection.  Do that
+            // manually here.
+            mServer->GetBleLayerObject()->CloseAllBleConnections();
+        }
+#endif
         ChipLogProgress(AppServer, "Closing pairing window");
         Cleanup();
     }
@@ -344,14 +347,22 @@ CHIP_ERROR CommissioningWindowManager::StartAdvertisement()
 #if CHIP_DEVICE_CONFIG_ENABLE_SED
     if (!mIsBLE && mWindowStatus == AdministratorCommissioning::CommissioningWindowStatus::kWindowNotOpen)
     {
-        DeviceLayer::ConnectivityMgr().RequestSEDFastPollingMode(true);
+        DeviceLayer::ConnectivityMgr().RequestSEDActiveMode(true);
     }
 #endif
 
 #if CONFIG_NETWORK_LAYER_BLE
     if (mIsBLE)
     {
-        ReturnErrorOnFailure(chip::DeviceLayer::ConnectivityMgr().SetBLEAdvertisingEnabled(true));
+        CHIP_ERROR err = chip::DeviceLayer::ConnectivityMgr().SetBLEAdvertisingEnabled(true);
+        // BLE advertising may just not be supported.  That should not prevent
+        // us from opening a commissioning window and advertising over IP.
+        if (err == CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE)
+        {
+            ChipLogProgress(AppServer, "BLE networking available but BLE advertising is not supported");
+            err = CHIP_NO_ERROR;
+        }
+        ReturnErrorOnFailure(err);
     }
 #endif // CONFIG_NETWORK_LAYER_BLE
 
@@ -386,7 +397,7 @@ CHIP_ERROR CommissioningWindowManager::StopAdvertisement(bool aShuttingDown)
 #if CHIP_DEVICE_CONFIG_ENABLE_SED
     if (!mIsBLE && mWindowStatus != AdministratorCommissioning::CommissioningWindowStatus::kWindowNotOpen)
     {
-        DeviceLayer::ConnectivityMgr().RequestSEDFastPollingMode(false);
+        DeviceLayer::ConnectivityMgr().RequestSEDActiveMode(false);
     }
 #endif
 
@@ -402,7 +413,10 @@ CHIP_ERROR CommissioningWindowManager::StopAdvertisement(bool aShuttingDown)
 #if CONFIG_NETWORK_LAYER_BLE
     if (mIsBLE)
     {
-        ReturnErrorOnFailure(chip::DeviceLayer::ConnectivityMgr().SetBLEAdvertisingEnabled(false));
+        // Ignore errors from SetBLEAdvertisingEnabled (which could be due to
+        // BLE advertising not being supported at all).  Our commissioning
+        // window is now closed and we need to notify our delegate of that.
+        (void) chip::DeviceLayer::ConnectivityMgr().SetBLEAdvertisingEnabled(false);
     }
 #endif // CONFIG_NETWORK_LAYER_BLE
 

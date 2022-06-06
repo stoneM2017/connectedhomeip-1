@@ -33,25 +33,14 @@
 #include <platform/CHIPDeviceLayer.h>
 #include <support/CHIPMem.h>
 
-#include <app/clusters/ota-requestor/BDXDownloader.h>
-#include <app/clusters/ota-requestor/DefaultOTARequestor.h>
-#include <app/clusters/ota-requestor/DefaultOTARequestorDriver.h>
-#include <app/clusters/ota-requestor/DefaultOTARequestorStorage.h>
-#include <platform/Ameba/AmebaOTAImageProcessor.h>
-
 void * __dso_handle = 0;
 
-using chip::AmebaOTAImageProcessor;
-using chip::BDXDownloader;
 using chip::ByteSpan;
-using chip::DefaultOTARequestor;
 using chip::EndpointId;
 using chip::FabricIndex;
-using chip::GetRequestorInstance;
 using chip::NodeId;
 using chip::OnDeviceConnected;
 using chip::OnDeviceConnectionFailure;
-using chip::OTADownloader;
 using chip::PeerId;
 using chip::Server;
 using chip::VendorId;
@@ -85,47 +74,8 @@ void NetWorkCommissioningInstInit()
 
 static DeviceCallbacks EchoCallbacks;
 
-DefaultOTARequestor gRequestorCore;
-DefaultOTARequestorStorage gRequestorStorage;
-DefaultOTARequestorDriver gRequestorUser;
-BDXDownloader gDownloader;
-AmebaOTAImageProcessor gImageProcessor;
-
-extern "C" void amebaQueryImageCmdHandler()
-{
-    ChipLogProgress(DeviceLayer, "Calling amebaQueryImageCmdHandler");
-    PlatformMgr().ScheduleWork([](intptr_t) { GetRequestorInstance()->TriggerImmediateQuery(); });
-}
-
-extern "C" void amebaApplyUpdateCmdHandler()
-{
-    ChipLogProgress(DeviceLayer, "Calling amebaApplyUpdateCmdHandler");
-    PlatformMgr().ScheduleWork([](intptr_t) { GetRequestorInstance()->ApplyUpdate(); });
-}
-
-static void InitOTARequestor(void)
-{
-    // Initialize and interconnect the Requestor and Image Processor objects -- START
-    SetRequestorInstance(&gRequestorCore);
-
-    gRequestorStorage.Init(chip::Server::GetInstance().GetPersistentStorage());
-
-    // Set server instance used for session establishment
-    gRequestorCore.Init(chip::Server::GetInstance(), gRequestorStorage, gRequestorUser, gDownloader);
-
-    gImageProcessor.SetOTADownloader(&gDownloader);
-
-    // Connect the Downloader and Image Processor objects
-    gDownloader.SetImageProcessorDelegate(&gImageProcessor);
-    gRequestorUser.Init(&gRequestorCore, &gImageProcessor);
-
-    // Initialize and interconnect the Requestor and Image Processor objects -- END
-}
-
 static void InitServer(intptr_t context)
 {
-    InitOTARequestor();
-
     // Init ZCL Data Model and CHIP App Server
     static chip::CommonCaseDeviceServerInitParams initParams;
     (void) initParams.InitializeStaticResourcesBeforeServerInit();

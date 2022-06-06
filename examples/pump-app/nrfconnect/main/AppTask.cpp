@@ -22,6 +22,7 @@
 #include "PumpManager.h"
 #include "ThreadUtil.h"
 
+#include <DeviceInfoProviderImpl.h>
 #include <app-common/zap-generated/attribute-id.h>
 #include <app-common/zap-generated/attribute-type.h>
 #include <app-common/zap-generated/attributes/Accessors.h>
@@ -41,8 +42,8 @@
 #endif
 
 #include <dk_buttons_and_leds.h>
-#include <logging/log.h>
-#include <zephyr.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/zephyr.h>
 
 using namespace ::chip;
 using namespace ::chip::app::Clusters;
@@ -72,6 +73,8 @@ LEDWidget sUnusedLED_1;
 bool sIsThreadProvisioned = false;
 bool sIsThreadEnabled     = false;
 bool sHaveBLEConnections  = false;
+
+chip::DeviceLayer::DeviceInfoProviderImpl gExampleDeviceInfoProvider;
 
 } // namespace
 
@@ -150,9 +153,10 @@ CHIP_ERROR AppTask::Init()
     (void) initParams.InitializeStaticResourcesBeforeServerInit();
 
     ReturnErrorOnFailure(chip::Server::GetInstance().Init(initParams));
-#if CONFIG_CHIP_OTA_REQUESTOR
-    InitBasicOTARequestor();
-#endif
+
+    gExampleDeviceInfoProvider.SetStorageDelegate(&Server::GetInstance().GetPersistentStorage());
+    chip::DeviceLayer::SetDeviceInfoProvider(&gExampleDeviceInfoProvider);
+
     ConfigurationMgr().LogDeviceConfig();
     PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kBLE));
 
@@ -463,6 +467,14 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */
         sIsThreadProvisioned = ConnectivityMgr().IsThreadProvisioned();
         sIsThreadEnabled     = ConnectivityMgr().IsThreadEnabled();
         UpdateStatusLED();
+        break;
+    case DeviceEventType::kThreadConnectivityChange:
+#if CONFIG_CHIP_OTA_REQUESTOR
+        if (event->ThreadConnectivityChange.Result == kConnectivity_Established)
+        {
+            InitBasicOTARequestor();
+        }
+#endif
         break;
     default:
         break;

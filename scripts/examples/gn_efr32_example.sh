@@ -19,12 +19,21 @@
 # Build script for GN EFT32 examples GitHub workflow.
 
 set -e
-source "$(dirname "$0")/../../scripts/activate.sh"
+
+if [[ -z "${MATTER_ROOT}" ]]; then
+    echo "Using default path for Matter root"
+    CHIP_ROOT="$(dirname "$0")/../.."
+else
+    echo "Using ENV path for Matter root"
+    CHIP_ROOT="$MATTER_ROOT"
+fi
+
+source "$CHIP_ROOT/scripts/activate.sh"
 
 set -x
 env
 USE_WIFI=false
-CHIP_ROOT="$(dirname "$0")/../.."
+
 USAGE="./scripts/examples/gn_efr32_example.sh <AppRootFolder> <outputFolder> <efr32_board_name> [<Build options>]"
 
 if [ "$#" == "0" ]; then
@@ -128,6 +137,10 @@ else
                 optArgs+="enable_sleepy_device=true chip_openthread_ftd=false "
                 shift
                 ;;
+            --chip_disable_wifi_ipv4)
+                optArgs+="chip_disable_wifi_ipv4=true "
+                shift
+                ;;
             *)
                 if [ "$1" =~ *"use_rs911x=true"* ] || [ "$1" =~ *"use_wf200=true"* ]; then
                     USE_WIFI=true
@@ -161,18 +174,4 @@ else
     #print stats
     arm-none-eabi-size -A "$BUILD_DIR"/*.out
 
-    # Generate bootloader file
-    if [ "${BUILD_DIR:0:2}" == "./" ]; then
-        BUILD_DIR_TRIMMED="${BUILD_DIR:2}"
-        S37_PATH=$(find "$BUILD_DIR_TRIMMED" -type f -name "*.s37")
-        if [ -z "$S37_PATH" ]; then
-            echo "Bootloader could not be built"
-        else
-            TARGET_PATH=${S37_PATH%????}
-            OTA_PATH="$TARGET_PATH".ota
-            commander gbl create "$TARGET_PATH".gbl --app "$S37_PATH"
-            GBL_PATH="$TARGET_PATH".gbl
-            ./src/app/ota_image_tool.py create -v 0xFFF1 -p 0x8005 -vn 1 -vs "1.0" -da sha256 "$GBL_PATH" "$OTA_PATH"
-        fi
-    fi
 fi

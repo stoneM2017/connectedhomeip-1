@@ -33,6 +33,7 @@
 #include <platform/internal/GenericConnectivityManagerImpl_BLE.ipp>
 #endif
 
+#include "CHIPDevicePlatformConfig.h"
 #include "wfx_host_events.h"
 
 using namespace ::chip;
@@ -388,8 +389,10 @@ void ConnectivityManagerImpl::UpdateInternetConnectivityState(void)
     if (mWiFiStationState == kWiFiStationState_Connected)
     {
 #if 1 //! defined (SL_WF200) || (SL_WF200 == 0)
-
         haveIPv4Conn = wfx_have_ipv4_addr(SL_WFX_STA_INTERFACE);
+#if (CHIP_DEVICE_CONFIG_ENABLE_IPV6)
+        haveIPv6Conn = wfx_have_ipv6_addr(SL_WFX_STA_INTERFACE);
+#endif
         /* TODO  - haveIPv6Conn */
 #else  /* Old code that needed LWIP and its internals */
         // Get the LwIP netif for the WiFi station interface.
@@ -450,10 +453,11 @@ void ConnectivityManagerImpl::UpdateInternetConnectivityState(void)
 
         // Alert other components of the state change.
         ChipDeviceEvent event;
-        event.Type                            = DeviceEventType::kInternetConnectivityChange;
-        event.InternetConnectivityChange.IPv4 = GetConnectivityChange(hadIPv4Conn, haveIPv4Conn);
-        event.InternetConnectivityChange.IPv6 = GetConnectivityChange(hadIPv6Conn, haveIPv6Conn);
-        addr.ToString(event.InternetConnectivityChange.address, sizeof(event.InternetConnectivityChange.address));
+        event.Type                                 = DeviceEventType::kInternetConnectivityChange;
+        event.InternetConnectivityChange.IPv4      = GetConnectivityChange(hadIPv4Conn, haveIPv4Conn);
+        event.InternetConnectivityChange.IPv6      = GetConnectivityChange(hadIPv6Conn, haveIPv6Conn);
+        event.InternetConnectivityChange.ipAddress = addr;
+
         (void) PlatformMgr().PostEvent(&event);
 
         if (haveIPv4Conn != hadIPv4Conn)

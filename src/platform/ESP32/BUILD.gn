@@ -28,12 +28,16 @@ static_library("ESP32") {
     "ConfigurationManagerImpl.h",
     "ConnectivityManagerImpl.cpp",
     "ConnectivityManagerImpl.h",
+    "DeviceInfoProviderImpl.cpp",
+    "DeviceInfoProviderImpl.h",
     "DeviceNetworkProvisioningDelegateImpl.cpp",
     "DeviceNetworkProvisioningDelegateImpl.h",
     "DiagnosticDataProviderImpl.cpp",
     "DiagnosticDataProviderImpl.h",
     "ESP32Config.cpp",
     "ESP32Config.h",
+    "ESP32FactoryDataProvider.cpp",
+    "ESP32FactoryDataProvider.h",
     "ESP32Utils.cpp",
     "ESP32Utils.h",
     "KeyValueStoreManagerImpl.cpp",
@@ -52,6 +56,8 @@ static_library("ESP32") {
     "${chip_root}/src/lib/dnssd:platform_header",
     "${chip_root}/src/setup_payload",
   ]
+
+  public = [ "${chip_root}/src/credentials/DeviceAttestationCredsProvider.h" ]
 
   public_deps = [
     "${chip_root}/src/crypto",

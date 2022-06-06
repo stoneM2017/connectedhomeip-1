@@ -18,6 +18,7 @@
 
 #include <controller/AutoCommissioner.h>
 
+#include <app/InteractionModelTimeout.h>
 #include <controller/CHIPDeviceController.h>
 #include <credentials/CHIPCert.h>
 #include <lib/support/SafeInt.h>
@@ -288,28 +289,56 @@ CHIP_ERROR AutoCommissioner::StartCommissioning(DeviceCommissioner * commissione
     CHIP_ERROR err               = CHIP_NO_ERROR;
     CommissioningStage nextStage = GetNextCommissioningStage(CommissioningStage::kSecurePairing, err);
     mCommissioner->PerformCommissioningStep(mCommissioneeDeviceProxy, nextStage, mParams, this, GetEndpoint(nextStage),
-                                            GetCommandTimeout(nextStage));
+                                            GetCommandTimeout(mCommissioneeDeviceProxy, nextStage));
     return CHIP_NO_ERROR;
 }
 
-Optional<System::Clock::Timeout> AutoCommissioner::GetCommandTimeout(CommissioningStage stage) const
+Optional<System::Clock::Timeout> AutoCommissioner::GetCommandTimeout(DeviceProxy * device, CommissioningStage stage) const
 {
-    // Per spec, all commands that are sent with the arm failsafe held need at least a 30s timeout.
-    // Network clusters can indicate the time required to connect, so if we are connecting, use that time as long as it is > 30s.
-    app::Clusters::NetworkCommissioning::Attributes::ConnectMaxTimeSeconds::TypeInfo::DecodableType seconds = 30;
+    // Network clusters can indicate the time required to connect, so if we are
+    // connecting, use that time as our "how long it takes to process server
+    // side" time.  Otherwise pick a time that should be enough for the command
+    // processing: 7s for slow steps that can involve crypto, the default IM
+    // timeout otherwise.
+    // TODO: is this a reasonable estimate for the slow-crypto cases?
+    constexpr System::Clock::Timeout kSlowCryptoProcessingTime = System::Clock::Seconds16(7);
+
+    System::Clock::Timeout timeout;
     switch (stage)
     {
     case CommissioningStage::kWiFiNetworkEnable:
-        ChipLogError(Controller, "Setting wifi connection time min = %u", mDeviceCommissioningInfo.network.wifi.minConnectionTime);
-        seconds = std::max(mDeviceCommissioningInfo.network.wifi.minConnectionTime, seconds);
+        ChipLogProgress(Controller, "Setting wifi connection time min = %u",
+                        mDeviceCommissioningInfo.network.wifi.minConnectionTime);
+        timeout = System::Clock::Seconds16(mDeviceCommissioningInfo.network.wifi.minConnectionTime);
         break;
     case CommissioningStage::kThreadNetworkEnable:
-        seconds = std::max(mDeviceCommissioningInfo.network.thread.minConnectionTime, seconds);
+        timeout = System::Clock::Seconds16(mDeviceCommissioningInfo.network.thread.minConnectionTime);
+        break;
+    case CommissioningStage::kSendNOC:
+    case CommissioningStage::kSendOpCertSigningRequest:
+        timeout = kSlowCryptoProcessingTime;
         break;
     default:
+        timeout = app::kExpectedIMProcessingTime;
         break;
     }
-    return MakeOptional(System::Clock::Timeout(System::Clock::Seconds16(seconds)));
+
+    // Adjust the timeout for our session transport latency, if we have access
+    // to a session.
+    auto sessionHandle = device->GetSecureSession();
+    if (sessionHandle.HasValue())
+    {
+        timeout = sessionHandle.Value()->ComputeRoundTripTimeout(timeout);
+    }
+
+    // Enforce the spec minimal timeout.  Maybe this enforcement should live in
+    // the DeviceCommissioner?
+    if (timeout < kMinimumCommissioningStepTimeout)
+    {
+        timeout = kMinimumCommissioningStepTimeout;
+    }
+
+    return MakeOptional(timeout);
 }
 
 CHIP_ERROR AutoCommissioner::NOCChainGenerated(ByteSpan noc, ByteSpan icac, ByteSpan rcac, AesCcm128KeySpan ipk,
@@ -325,7 +354,8 @@ CHIP_ERROR AutoCommissioner::NOCChainGenerated(ByteSpan noc, ByteSpan icac, Byte
     mParams.SetNoc(noCert);
 
     CommissioningStage nextStage = CommissioningStage::kSendTrustedRootCert;
-    mCommissioner->PerformCommissioningStep(mCommissioneeDeviceProxy, nextStage, mParams, this, 0, GetCommandTimeout(nextStage));
+    mCommissioner->PerformCommissioningStep(mCommissioneeDeviceProxy, nextStage, mParams, this, 0,
+                                            GetCommandTimeout(mCommissioneeDeviceProxy, nextStage));
 
     // Trusted root cert has been sent, so we can re-use the icac buffer for the icac.
     if (!icac.empty())
@@ -363,21 +393,27 @@ CHIP_ERROR AutoCommissioner::CommissioningStepFinished(CHIP_ERROR err, Commissio
     {
         completionStatus.failedStage = MakeOptional(report.stageCompleted);
         ChipLogError(Controller, "Failed to perform commissioning step %d", static_cast<int>(report.stageCompleted));
-        if (report.stageCompleted == CommissioningStage::kAttestationVerification)
+        if (report.Is<AttestationErrorInfo>())
         {
-            if (report.Is<AdditionalErrorInfo>())
+            completionStatus.attestationResult = MakeOptional(report.Get<AttestationErrorInfo>().attestationResult);
+            if ((report.Get<AttestationErrorInfo>().attestationResult ==
+                 Credentials::AttestationVerificationResult::kDacProductIdMismatch) ||
+                (report.Get<AttestationErrorInfo>().attestationResult ==
+                 Credentials::AttestationVerificationResult::kDacVendorIdMismatch))
             {
-                completionStatus.attestationResult = MakeOptional(report.Get<AdditionalErrorInfo>().attestationResult);
-                if ((report.Get<AdditionalErrorInfo>().attestationResult ==
-                     Credentials::AttestationVerificationResult::kDacProductIdMismatch) ||
-                    (report.Get<AdditionalErrorInfo>().attestationResult ==
-                     Credentials::AttestationVerificationResult::kDacVendorIdMismatch))
-                {
-                    ChipLogError(Controller,
-                                 "Failed device attestation. Device vendor and/or product ID do not match the IDs expected. "
-                                 "Verify DAC certificate chain and certification declaration to ensure spec rules followed.");
-                }
+                ChipLogError(Controller,
+                             "Failed device attestation. Device vendor and/or product ID do not match the IDs expected. "
+                             "Verify DAC certificate chain and certification declaration to ensure spec rules followed.");
             }
+        }
+        else if (report.Is<CommissioningErrorInfo>())
+        {
+            completionStatus.commissioningError = MakeOptional(report.Get<CommissioningErrorInfo>().commissioningError);
+        }
+        else if (report.Is<NetworkCommissioningStatusInfo>())
+        {
+            completionStatus.networkCommissioningStatus =
+                MakeOptional(report.Get<NetworkCommissioningStatusInfo>().networkCommissioningStatus);
         }
     }
     else
@@ -447,6 +483,14 @@ CHIP_ERROR AutoCommissioner::CommissioningStepFinished(CHIP_ERROR err, Commissio
         return CHIP_ERROR_INCORRECT_STATE;
     }
 
+    // If GetNextCommissioningStage indicated a failure, don't lose track of
+    // that.  But don't overwrite any existing failures we had hanging
+    // around.
+    if (completionStatus.err == CHIP_NO_ERROR)
+    {
+        completionStatus.err = err;
+    }
+
     DeviceProxy * proxy = mCommissioneeDeviceProxy;
     if (nextStage == CommissioningStage::kSendComplete ||
         (nextStage == CommissioningStage::kCleanup && mOperationalDeviceProxy != nullptr))
@@ -461,7 +505,8 @@ CHIP_ERROR AutoCommissioner::CommissioningStepFinished(CHIP_ERROR err, Commissio
     }
 
     mParams.SetCompletionStatus(completionStatus);
-    mCommissioner->PerformCommissioningStep(proxy, nextStage, mParams, this, GetEndpoint(nextStage), GetCommandTimeout(nextStage));
+    mCommissioner->PerformCommissioningStep(proxy, nextStage, mParams, this, GetEndpoint(nextStage),
+                                            GetCommandTimeout(proxy, nextStage));
     return CHIP_NO_ERROR;
 }
 

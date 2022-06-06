@@ -14,7 +14,7 @@ using chip::Dnssd::DnssdService;
 using chip::Dnssd::DnssdServiceProtocol;
 using chip::Dnssd::TextEntry;
 
-static void HandleResolve(void * context, DnssdService * result, const chip::Span<chip::Inet::IPAddress> & extraIPs,
+static void HandleResolve(void * context, DnssdService * result, const chip::Span<chip::Inet::IPAddress> & addresses,
                           CHIP_ERROR error)
 {
     char addrBuf[100];
@@ -22,8 +22,11 @@ static void HandleResolve(void * context, DnssdService * result, const chip::Spa
 
     NL_TEST_ASSERT(suite, result != nullptr);
     NL_TEST_ASSERT(suite, error == CHIP_NO_ERROR);
-    result->mAddress.Value().ToString(addrBuf, sizeof(addrBuf));
-    printf("Service at [%s]:%u\n", addrBuf, result->mPort);
+    if (!addresses.empty())
+    {
+        addresses.data()[0].ToString(addrBuf, sizeof(addrBuf));
+        printf("Service at [%s]:%u\n", addrBuf, result->mPort);
+    }
     NL_TEST_ASSERT(suite, result->mTextEntrySize == 1);
     NL_TEST_ASSERT(suite, strcmp(result->mTextEntries[0].mKey, "key") == 0);
     NL_TEST_ASSERT(suite, strcmp(reinterpret_cast<const char *>(result->mTextEntries[0].mData), "val") == 0);
@@ -40,7 +43,7 @@ static void HandleBrowse(void * context, DnssdService * services, size_t service
     NL_TEST_ASSERT(suite, error == CHIP_NO_ERROR);
     if (services)
     {
-        printf("Mdns service size %zu\n", servicesSize);
+        printf("Mdns service size %u\n", static_cast<unsigned int>(servicesSize));
         printf("Service name %s\n", services->mName);
         printf("Service type %s\n", services->mType);
         NL_TEST_ASSERT(suite, ChipDnssdResolve(services, chip::Inet::InterfaceId::Null(), HandleResolve, suite) == CHIP_NO_ERROR);

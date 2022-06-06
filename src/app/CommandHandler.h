@@ -302,8 +302,7 @@ private:
      */
     CHIP_ERROR ProcessGroupCommandDataIB(CommandDataIB::Parser & aCommandElement);
     CHIP_ERROR SendCommandResponse();
-    CHIP_ERROR AddStatusInternal(const ConcreteCommandPath & aCommandPath, const Protocols::InteractionModel::Status aStatus,
-                                 const Optional<ClusterStatus> & aClusterStatus);
+    CHIP_ERROR AddStatusInternal(const ConcreteCommandPath & aCommandPath, const StatusIB & aStatus);
 
     /**
      * If this function fails, it may leave our TLV buffer in an inconsistent state.  Callers should snapshot as needed before
@@ -320,7 +319,7 @@ private:
         ReturnErrorOnFailure(PrepareCommand(path, false));
         TLV::TLVWriter * writer = GetCommandDataIBTLVWriter();
         VerifyOrReturnError(writer != nullptr, CHIP_ERROR_INCORRECT_STATE);
-        ReturnErrorOnFailure(DataModel::Encode(*writer, TLV::ContextTag(to_underlying(CommandDataIB::Tag::kData)), aData));
+        ReturnErrorOnFailure(DataModel::Encode(*writer, TLV::ContextTag(to_underlying(CommandDataIB::Tag::kFields)), aData));
 
         return FinishCommand(/* aEndDataStruct = */ false);
     }

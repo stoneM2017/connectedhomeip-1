@@ -28,6 +28,8 @@
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/internal/DeviceNetworkInfo.h>
 
+#include <inet/EndPointStateOpenThread.h>
+
 #include <app-common/zap-generated/attribute-id.h>
 #include <app-common/zap-generated/attribute-type.h>
 #include <app-common/zap-generated/cluster-id.h>
@@ -184,12 +186,27 @@ CHIP_ERROR AppTask::Init()
     return err;
 }
 
+void LockOpenThreadTask(void)
+{
+    chip::DeviceLayer::ThreadStackMgr().LockThreadStack();
+}
+
+void UnlockOpenThreadTask(void)
+{
+    chip::DeviceLayer::ThreadStackMgr().UnlockThreadStack();
+}
+
 void AppTask::InitServer(intptr_t arg)
 {
     static chip::CommonCaseDeviceServerInitParams initParams;
     (void) initParams.InitializeStaticResourcesBeforeServerInit();
 
     // Init ZCL Data Model and start server
+    chip::Inet::EndPointStateOpenThread::OpenThreadEndpointInitParam nativeParams;
+    nativeParams.lockCb                = LockOpenThreadTask;
+    nativeParams.unlockCb              = UnlockOpenThreadTask;
+    nativeParams.openThreadInstancePtr = chip::DeviceLayer::ThreadStackMgrImpl().OTInstance();
+    initParams.endpointNativeParams    = static_cast<void *>(&nativeParams);
     VerifyOrDie((chip::Server::GetInstance().Init(initParams)) == CHIP_NO_ERROR);
 }
 
@@ -690,13 +707,6 @@ void AppTask::OTAResumeEventHandler(AppEvent * aEvent)
     }
 }
 
-extern "C" void vApplicationIdleHook(void)
-{
-#if CHIP_DEVICE_CONFIG_ENABLE_OTA_REQUESTOR
-    OTA_TransactionResume();
-#endif
-}
-
 void AppTask::PostEvent(const AppEvent * aEvent)
 {
     if (sAppEventQueue != NULL)
@@ -730,8 +740,8 @@ void AppTask::UpdateClusterStateInternal(intptr_t arg)
     uint8_t newValue = !LightingMgr().IsTurnedOff();
 
     // write the new on/off value
-    EmberAfStatus status = emberAfWriteAttribute(1, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, CLUSTER_MASK_SERVER,
-                                                 (uint8_t *) &newValue, ZCL_BOOLEAN_ATTRIBUTE_TYPE);
+    EmberAfStatus status =
+        emberAfWriteAttribute(1, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, (uint8_t *) &newValue, ZCL_BOOLEAN_ATTRIBUTE_TYPE);
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
         ChipLogError(NotSpecified, "ERR: updating on/off %x", status);
@@ -748,9 +758,15 @@ void AppTask::UpdateDeviceStateInternal(intptr_t arg)
     bool onoffAttrValue = 0;
 
     /* get onoff attribute value */
-    (void) emberAfReadAttribute(1, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, CLUSTER_MASK_SERVER, (uint8_t *) &onoffAttrValue,
-                                1, NULL);
+    (void) emberAfReadAttribute(1, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, (uint8_t *) &onoffAttrValue, 1);
 
     /* set the device state */
     sLightLED.Set(onoffAttrValue);
+}
+
+extern "C" void OTAIdleActivities(void)
+{
+#if CHIP_DEVICE_CONFIG_ENABLE_OTA_REQUESTOR
+    OTA_TransactionResume();
+#endif
 }

@@ -37,7 +37,14 @@
     /* Cluster: Basic, Attribute: NodeLabel, Privilege: view */ \
     /* Cluster: Basic, Attribute: Location, Privilege: view */ \
     /* Cluster: Basic, Attribute: LocalConfigDisabled, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: Language, Privilege: view */ \
     /* Cluster: Door Lock, Attribute: AutoRelockTime, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: SoundVolume, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: OperatingMode, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: EnableOneTouchLocking, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: EnablePrivacyModeButton, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: WrongCodeEntryLimit, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: UserCodeTemporaryDisableTime, Privilege: view */ \
     /* Cluster: Door Lock, Attribute: RequirePINforRemoteOperation, Privilege: view */ \
     /* Cluster: General Commissioning, Attribute: Breadcrumb, Privilege: view */ \
     49, /* Cluster: Network Commissioning, Attribute: MaxNetworks, Privilege: administer */ \
@@ -61,7 +68,14 @@
     /* Cluster: Basic, Attribute: NodeLabel, Privilege: view */ \
     /* Cluster: Basic, Attribute: Location, Privilege: view */ \
     /* Cluster: Basic, Attribute: LocalConfigDisabled, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: Language, Privilege: view */ \
     /* Cluster: Door Lock, Attribute: AutoRelockTime, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: SoundVolume, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: OperatingMode, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: EnableOneTouchLocking, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: EnablePrivacyModeButton, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: WrongCodeEntryLimit, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: UserCodeTemporaryDisableTime, Privilege: view */ \
     /* Cluster: Door Lock, Attribute: RequirePINforRemoteOperation, Privilege: view */ \
     /* Cluster: General Commissioning, Attribute: Breadcrumb, Privilege: view */ \
     0, /* Cluster: Network Commissioning, Attribute: MaxNetworks, Privilege: administer */ \
@@ -85,7 +99,14 @@
     /* Cluster: Basic, Attribute: NodeLabel, Privilege: view */ \
     /* Cluster: Basic, Attribute: Location, Privilege: view */ \
     /* Cluster: Basic, Attribute: LocalConfigDisabled, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: Language, Privilege: view */ \
     /* Cluster: Door Lock, Attribute: AutoRelockTime, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: SoundVolume, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: OperatingMode, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: EnableOneTouchLocking, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: EnablePrivacyModeButton, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: WrongCodeEntryLimit, Privilege: view */ \
+    /* Cluster: Door Lock, Attribute: UserCodeTemporaryDisableTime, Privilege: view */ \
     /* Cluster: Door Lock, Attribute: RequirePINforRemoteOperation, Privilege: view */ \
     /* Cluster: General Commissioning, Attribute: Breadcrumb, Privilege: view */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Network Commissioning, Attribute: MaxNetworks, Privilege: administer */ \
@@ -108,7 +129,14 @@
     40, /* Cluster: Basic, Attribute: NodeLabel, Privilege: manage */ \
     40, /* Cluster: Basic, Attribute: Location, Privilege: administer */ \
     40, /* Cluster: Basic, Attribute: LocalConfigDisabled, Privilege: manage */ \
+    257, /* Cluster: Door Lock, Attribute: Language, Privilege: manage */ \
     257, /* Cluster: Door Lock, Attribute: AutoRelockTime, Privilege: manage */ \
+    257, /* Cluster: Door Lock, Attribute: SoundVolume, Privilege: manage */ \
+    257, /* Cluster: Door Lock, Attribute: OperatingMode, Privilege: manage */ \
+    257, /* Cluster: Door Lock, Attribute: EnableOneTouchLocking, Privilege: manage */ \
+    257, /* Cluster: Door Lock, Attribute: EnablePrivacyModeButton, Privilege: manage */ \
+    257, /* Cluster: Door Lock, Attribute: WrongCodeEntryLimit, Privilege: administer */ \
+    257, /* Cluster: Door Lock, Attribute: UserCodeTemporaryDisableTime, Privilege: administer */ \
     257, /* Cluster: Door Lock, Attribute: RequirePINforRemoteOperation, Privilege: administer */ \
     48, /* Cluster: General Commissioning, Attribute: Breadcrumb, Privilege: administer */ \
     49, /* Cluster: Network Commissioning, Attribute: InterfaceEnabled, Privilege: administer */ \
@@ -123,7 +151,14 @@
     5, /* Cluster: Basic, Attribute: NodeLabel, Privilege: manage */ \
     6, /* Cluster: Basic, Attribute: Location, Privilege: administer */ \
     16, /* Cluster: Basic, Attribute: LocalConfigDisabled, Privilege: manage */ \
+    33, /* Cluster: Door Lock, Attribute: Language, Privilege: manage */ \
     35, /* Cluster: Door Lock, Attribute: AutoRelockTime, Privilege: manage */ \
+    36, /* Cluster: Door Lock, Attribute: SoundVolume, Privilege: manage */ \
+    37, /* Cluster: Door Lock, Attribute: OperatingMode, Privilege: manage */ \
+    41, /* Cluster: Door Lock, Attribute: EnableOneTouchLocking, Privilege: manage */ \
+    43, /* Cluster: Door Lock, Attribute: EnablePrivacyModeButton, Privilege: manage */ \
+    48, /* Cluster: Door Lock, Attribute: WrongCodeEntryLimit, Privilege: administer */ \
+    49, /* Cluster: Door Lock, Attribute: UserCodeTemporaryDisableTime, Privilege: administer */ \
     51, /* Cluster: Door Lock, Attribute: RequirePINforRemoteOperation, Privilege: administer */ \
     0, /* Cluster: General Commissioning, Attribute: Breadcrumb, Privilege: administer */ \
     4, /* Cluster: Network Commissioning, Attribute: InterfaceEnabled, Privilege: administer */ \
@@ -138,7 +173,14 @@
     kMatterAccessPrivilegeManage, /* Cluster: Basic, Attribute: NodeLabel, Privilege: manage */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Basic, Attribute: Location, Privilege: administer */ \
     kMatterAccessPrivilegeManage, /* Cluster: Basic, Attribute: LocalConfigDisabled, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Door Lock, Attribute: Language, Privilege: manage */ \
     kMatterAccessPrivilegeManage, /* Cluster: Door Lock, Attribute: AutoRelockTime, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Door Lock, Attribute: SoundVolume, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Door Lock, Attribute: OperatingMode, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Door Lock, Attribute: EnableOneTouchLocking, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Door Lock, Attribute: EnablePrivacyModeButton, Privilege: manage */ \
+    kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Attribute: WrongCodeEntryLimit, Privilege: administer */ \
+    kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Attribute: UserCodeTemporaryDisableTime, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Attribute: RequirePINforRemoteOperation, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: General Commissioning, Attribute: Breadcrumb, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Network Commissioning, Attribute: InterfaceEnabled, Privilege: administer */ \
@@ -159,6 +201,9 @@
     257, /* Cluster: Door Lock, Command: SetYearDaySchedule, Privilege: administer */ \
     257, /* Cluster: Door Lock, Command: GetYearDaySchedule, Privilege: administer */ \
     257, /* Cluster: Door Lock, Command: ClearYearDaySchedule, Privilege: administer */ \
+    257, /* Cluster: Door Lock, Command: SetHolidaySchedule, Privilege: administer */ \
+    257, /* Cluster: Door Lock, Command: GetHolidaySchedule, Privilege: administer */ \
+    257, /* Cluster: Door Lock, Command: ClearHolidaySchedule, Privilege: administer */ \
     257, /* Cluster: Door Lock, Command: SetUser, Privilege: administer */ \
     257, /* Cluster: Door Lock, Command: GetUser, Privilege: administer */ \
     257, /* Cluster: Door Lock, Command: ClearUser, Privilege: administer */ \
@@ -168,6 +213,11 @@
     48, /* Cluster: General Commissioning, Command: ArmFailSafe, Privilege: administer */ \
     48, /* Cluster: General Commissioning, Command: SetRegulatoryConfig, Privilege: administer */ \
     48, /* Cluster: General Commissioning, Command: CommissioningComplete, Privilege: administer */ \
+    4, /* Cluster: Groups, Command: AddGroup, Privilege: manage */ \
+    4, /* Cluster: Groups, Command: RemoveGroup, Privilege: manage */ \
+    4, /* Cluster: Groups, Command: RemoveAllGroups, Privilege: manage */ \
+    4, /* Cluster: Groups, Command: AddGroupIfIdentifying, Privilege: manage */ \
+    3, /* Cluster: Identify, Command: Identify, Privilege: manage */ \
     49, /* Cluster: Network Commissioning, Command: ScanNetworks, Privilege: administer */ \
     49, /* Cluster: Network Commissioning, Command: AddOrUpdateWiFiNetwork, Privilege: administer */ \
     49, /* Cluster: Network Commissioning, Command: AddOrUpdateThreadNetwork, Privilege: administer */ \
@@ -182,7 +232,6 @@
     62, /* Cluster: Operational Credentials, Command: UpdateFabricLabel, Privilege: administer */ \
     62, /* Cluster: Operational Credentials, Command: RemoveFabric, Privilege: administer */ \
     62, /* Cluster: Operational Credentials, Command: AddTrustedRootCertificate, Privilege: administer */ \
-    62, /* Cluster: Operational Credentials, Command: RemoveTrustedRootCertificate, Privilege: administer */ \
 }
 
 // Parallel array data (cluster, *command*, privilege) for invoke command
@@ -196,6 +245,9 @@
     14, /* Cluster: Door Lock, Command: SetYearDaySchedule, Privilege: administer */ \
     15, /* Cluster: Door Lock, Command: GetYearDaySchedule, Privilege: administer */ \
     16, /* Cluster: Door Lock, Command: ClearYearDaySchedule, Privilege: administer */ \
+    17, /* Cluster: Door Lock, Command: SetHolidaySchedule, Privilege: administer */ \
+    18, /* Cluster: Door Lock, Command: GetHolidaySchedule, Privilege: administer */ \
+    19, /* Cluster: Door Lock, Command: ClearHolidaySchedule, Privilege: administer */ \
     26, /* Cluster: Door Lock, Command: SetUser, Privilege: administer */ \
     27, /* Cluster: Door Lock, Command: GetUser, Privilege: administer */ \
     29, /* Cluster: Door Lock, Command: ClearUser, Privilege: administer */ \
@@ -205,6 +257,11 @@
     0, /* Cluster: General Commissioning, Command: ArmFailSafe, Privilege: administer */ \
     2, /* Cluster: General Commissioning, Command: SetRegulatoryConfig, Privilege: administer */ \
     4, /* Cluster: General Commissioning, Command: CommissioningComplete, Privilege: administer */ \
+    0, /* Cluster: Groups, Command: AddGroup, Privilege: manage */ \
+    3, /* Cluster: Groups, Command: RemoveGroup, Privilege: manage */ \
+    4, /* Cluster: Groups, Command: RemoveAllGroups, Privilege: manage */ \
+    5, /* Cluster: Groups, Command: AddGroupIfIdentifying, Privilege: manage */ \
+    0, /* Cluster: Identify, Command: Identify, Privilege: manage */ \
     0, /* Cluster: Network Commissioning, Command: ScanNetworks, Privilege: administer */ \
     2, /* Cluster: Network Commissioning, Command: AddOrUpdateWiFiNetwork, Privilege: administer */ \
     3, /* Cluster: Network Commissioning, Command: AddOrUpdateThreadNetwork, Privilege: administer */ \
@@ -219,7 +276,6 @@
     9, /* Cluster: Operational Credentials, Command: UpdateFabricLabel, Privilege: administer */ \
     10, /* Cluster: Operational Credentials, Command: RemoveFabric, Privilege: administer */ \
     11, /* Cluster: Operational Credentials, Command: AddTrustedRootCertificate, Privilege: administer */ \
-    12, /* Cluster: Operational Credentials, Command: RemoveTrustedRootCertificate, Privilege: administer */ \
 }
 
 // Parallel array data (cluster, command, *privilege*) for invoke command
@@ -233,6 +289,9 @@
     kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: SetYearDaySchedule, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: GetYearDaySchedule, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: ClearYearDaySchedule, Privilege: administer */ \
+    kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: SetHolidaySchedule, Privilege: administer */ \
+    kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: GetHolidaySchedule, Privilege: administer */ \
+    kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: ClearHolidaySchedule, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: SetUser, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: GetUser, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Door Lock, Command: ClearUser, Privilege: administer */ \
@@ -242,6 +301,11 @@
     kMatterAccessPrivilegeAdminister, /* Cluster: General Commissioning, Command: ArmFailSafe, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: General Commissioning, Command: SetRegulatoryConfig, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: General Commissioning, Command: CommissioningComplete, Privilege: administer */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Groups, Command: AddGroup, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Groups, Command: RemoveGroup, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Groups, Command: RemoveAllGroups, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Groups, Command: AddGroupIfIdentifying, Privilege: manage */ \
+    kMatterAccessPrivilegeManage, /* Cluster: Identify, Command: Identify, Privilege: manage */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Network Commissioning, Command: ScanNetworks, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Network Commissioning, Command: AddOrUpdateWiFiNetwork, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Network Commissioning, Command: AddOrUpdateThreadNetwork, Privilege: administer */ \
@@ -256,7 +320,6 @@
     kMatterAccessPrivilegeAdminister, /* Cluster: Operational Credentials, Command: UpdateFabricLabel, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Operational Credentials, Command: RemoveFabric, Privilege: administer */ \
     kMatterAccessPrivilegeAdminister, /* Cluster: Operational Credentials, Command: AddTrustedRootCertificate, Privilege: administer */ \
-    kMatterAccessPrivilegeAdminister, /* Cluster: Operational Credentials, Command: RemoveTrustedRootCertificate, Privilege: administer */ \
 }
 
 ////////////////////////////////////////////////////////////////////////////////

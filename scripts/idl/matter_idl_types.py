@@ -1,7 +1,24 @@
 import enum
+from lark.tree import Meta
 
 from dataclasses import dataclass, field
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Union
+
+
+# Information about parsing location for specific items
+# Helpful when referencing data items in logs when processing
+@dataclass
+class ParseMetaData:
+    line: int
+    column: int
+
+    def __init__(self, meta: Meta = None, line: int = None, column: int = None):
+        if meta:
+            self.line = meta.line
+            self.column = meta.column
+        else:
+            self.line = line
+            self.column = column
 
 
 class FieldAttribute(enum.Enum):
@@ -17,6 +34,12 @@ class AttributeTag(enum.Enum):
     READABLE = enum.auto()
     WRITABLE = enum.auto()
     NOSUBSCRIBE = enum.auto()
+
+
+class AttributeStorage(enum.Enum):
+    RAM = enum.auto()
+    PERSIST = enum.auto()
+    CALLBACK = enum.auto()
 
 
 class EventPriority(enum.Enum):
@@ -83,6 +106,7 @@ class Attribute:
     tags: Set[AttributeTag] = field(default_factory=set)
     readacl: AccessPrivilege = AccessPrivilege.VIEW
     writeacl: AccessPrivilege = AccessPrivilege.OPERATE
+    default: Optional[Union[str, int]] = None
 
     @property
     def is_readable(self):
@@ -102,6 +126,7 @@ class Struct:
     name: str
     fields: List[Field]
     tag: Optional[StructTag] = None
+    code: Optional[int] = None  # for responses only
 
 
 @dataclass
@@ -159,11 +184,40 @@ class Cluster:
     structs: List[Struct] = field(default_factory=list)
     commands: List[Command] = field(default_factory=list)
 
+    # Parsing meta data missing only when skip meta data is requested
+    parse_meta: Optional[ParseMetaData] = field(default=None)
+
+
+@dataclass
+class AttributeInstantiation:
+    name: str
+    storage: AttributeStorage
+    default: Optional[Union[str, int, bool]] = None
+
+    # Parsing meta data missing only when skip meta data is requested
+    parse_meta: Optional[ParseMetaData] = field(default=None)
+
+
+@dataclass
+class ServerClusterInstantiation:
+    name: str
+    attributes: List[AttributeInstantiation] = field(default_factory=list)
+
+    # Parsing meta data missing only when skip meta data is requested
+    parse_meta: Optional[ParseMetaData] = field(default=None)
+
+
+@dataclass
+class DeviceType:
+    name: str
+    code: int
+
 
 @dataclass
 class Endpoint:
     number: int
-    server_clusters: List[str] = field(default_factory=list)
+    device_types: List[DeviceType] = field(default_factory=list)
+    server_clusters: List[ServerClusterInstantiation] = field(default_factory=list)
     client_bindings: List[str] = field(default_factory=list)
 
 
@@ -174,3 +228,6 @@ class Idl:
     structs: List[Struct] = field(default_factory=list)
     clusters: List[Cluster] = field(default_factory=list)
     endpoints: List[Endpoint] = field(default_factory=list)
+
+    # IDL file name is available only if parsing provides a file name
+    parse_file_name: Optional[str] = field(default=None)

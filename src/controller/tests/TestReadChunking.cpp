@@ -64,7 +64,8 @@ constexpr EndpointId kTestEndpointId3 = 3;
 constexpr EndpointId kTestEndpointId4    = 4;
 constexpr EndpointId kTestEndpointId5    = 5;
 constexpr AttributeId kTestListAttribute = 6;
-constexpr AttributeId kTestBadAttribute  = 7; // Reading this attribute will return CHIP_NO_MEMORY but nothing is actually encoded.
+constexpr AttributeId kTestBadAttribute =
+    7; // Reading this attribute will return CHIP_ERROR_NO_MEMORY but nothing is actually encoded.
 
 class TestCommandInteraction
 {
@@ -128,11 +129,11 @@ public:
     void OnAttributeData(const app::ConcreteDataAttributePath & aPath, TLV::TLVReader * apData,
                          const app::StatusIB & aStatus) override;
 
-    void OnDone() override;
+    void OnDone(app::ReadClient * apReadClient) override;
 
     void OnReportEnd() override { mOnReportEnd = true; }
 
-    void OnSubscriptionEstablished(uint64_t aSubscriptionId) override { mOnSubscriptionEstablished = true; }
+    void OnSubscriptionEstablished(SubscriptionId aSubscriptionId) override { mOnSubscriptionEstablished = true; }
 
     uint32_t mAttributeCount        = 0;
     bool mOnReportEnd               = false;
@@ -198,7 +199,7 @@ void TestReadCallback::OnAttributeData(const app::ConcreteDataAttributePath & aP
     mAttributeCount++;
 }
 
-void TestReadCallback::OnDone() {}
+void TestReadCallback::OnDone(app::ReadClient *) {}
 
 class TestMutableAttrAccess
 {
@@ -274,7 +275,7 @@ CHIP_ERROR TestAttrAccess::Read(const app::ConcreteReadAttributePath & aPath, ap
         });
     case kTestBadAttribute:
         // The "BadAttribute" is implemented by encoding a very large octet string, then the encode will always return
-        // CHIP_NO_MEMORY.
+        // CHIP_ERROR_NO_MEMORY.
         return aEncoder.EncodeList([](const auto & encoder) {
             return encoder.Encode(ByteSpan(sAnStringThatCanNeverFitIntoTheMTU, sizeof(sAnStringThatCanNeverFitIntoTheMTU)));
         });
@@ -295,13 +296,13 @@ public:
     void OnAttributeData(const app::ConcreteDataAttributePath & aPath, TLV::TLVReader * apData,
                          const app::StatusIB & aStatus) override;
 
-    void OnDone() override {}
+    void OnDone(app::ReadClient *) override {}
 
     void OnReportBegin() override { mAttributeCount = 0; }
 
     void OnReportEnd() override { mOnReportEnd = true; }
 
-    void OnSubscriptionEstablished(uint64_t aSubscriptionId) override { mOnSubscriptionEstablished = true; }
+    void OnSubscriptionEstablished(SubscriptionId aSubscriptionId) override { mOnSubscriptionEstablished = true; }
 
     uint32_t mAttributeCount = 0;
     // We record every dataversion field from every attribute IB.
@@ -908,7 +909,7 @@ nlTestSuite sSuite =
 {
     "TestReadChunking",
     &sTests[0],
-    TestContext::InitializeAsync,
+    TestContext::Initialize,
     TestContext::Finalize
 };
 // clang-format on

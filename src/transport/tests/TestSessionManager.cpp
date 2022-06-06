@@ -24,7 +24,7 @@
 #define CHIP_ENABLE_TEST_ENCRYPTED_BUFFER_API // Up here in case some other header
                                               // includes SessionManager.h indirectly
 
-#include <credentials/tests/CHIPCert_test_vectors.h>
+#include <credentials/tests/CHIPCert_unit_test_vectors.h>
 #include <lib/core/CHIPCore.h>
 #include <lib/support/CodeUtils.h>
 #include <lib/support/TestPersistentStorageDelegate.h>
@@ -35,7 +35,7 @@
 #include <protocols/secure_channel/PASESession.h>
 #include <transport/SessionManager.h>
 #include <transport/TransportMgr.h>
-#include <transport/raw/tests/NetworkTestHelpers.h>
+#include <transport/tests/LoopbackTransportManager.h>
 
 #include <nlbyteorder.h>
 #include <nlunit-test.h>
@@ -50,28 +50,19 @@ using namespace chip;
 using namespace chip::Inet;
 using namespace chip::Transport;
 using namespace chip::Test;
+using namespace chip::TestCerts;
 
-using TestContext = chip::Test::IOContext;
-
-TestContext sContext;
+using TestContext = chip::Test::LoopbackTransportManager;
 
 const char PAYLOAD[] = "Hello!";
 
 const char LARGE_PAYLOAD[kMaxAppMessageLen + 1] = "test message";
 
-class TestSessionReleaseCallback : public SessionReleaseDelegate
-{
-public:
-    void OnSessionReleased() override { mOldConnectionDropped = true; }
-    bool mOldConnectionDropped = false;
-};
-
 class TestSessMgrCallback : public SessionMessageDelegate
 {
 public:
     void OnMessageReceived(const PacketHeader & header, const PayloadHeader & payloadHeader, const SessionHandle & session,
-                           const Transport::PeerAddress & source, DuplicateMessage isDuplicate,
-                           System::PacketBufferHandle && msgBuf) override
+                           DuplicateMessage isDuplicate, System::PacketBufferHandle && msgBuf) override
     {
         size_t data_len = msgBuf->DataLength();
 
@@ -98,18 +89,16 @@ void CheckSimpleInitTest(nlTestSuite * inSuite, void * inContext)
 {
     TestContext & ctx = *reinterpret_cast<TestContext *>(inContext);
 
-    TransportMgr<LoopbackTransport> transportMgr;
     FabricTable fabricTable;
     SessionManager sessionManager;
     secure_channel::MessageCounterManager gMessageCounterManager;
     chip::TestPersistentStorageDelegate deviceStorage;
 
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == transportMgr.Init("LOOPBACK"));
     NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.Init(&deviceStorage));
-    NL_TEST_ASSERT(
-        inSuite,
-        CHIP_NO_ERROR ==
-            sessionManager.Init(&ctx.GetSystemLayer(), &transportMgr, &gMessageCounterManager, &deviceStorage, &fabricTable));
+    NL_TEST_ASSERT(inSuite,
+                   CHIP_NO_ERROR ==
+                       sessionManager.Init(&ctx.GetSystemLayer(), &ctx.GetTransportMgr(), &gMessageCounterManager, &deviceStorage,
+                                           &fabricTable));
 }
 
 void CheckMessageTest(nlTestSuite * inSuite, void * inContext)
@@ -128,18 +117,16 @@ void CheckMessageTest(nlTestSuite * inSuite, void * inContext)
     IPAddress::FromString("::1", addr);
     CHIP_ERROR err = CHIP_NO_ERROR;
 
-    TransportMgr<LoopbackTransport> transportMgr;
     FabricTable fabricTable;
     SessionManager sessionManager;
     secure_channel::MessageCounterManager gMessageCounterManager;
     chip::TestPersistentStorageDelegate deviceStorage;
 
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == transportMgr.Init("LOOPBACK"));
     NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.Init(&deviceStorage));
-    NL_TEST_ASSERT(
-        inSuite,
-        CHIP_NO_ERROR ==
-            sessionManager.Init(&ctx.GetSystemLayer(), &transportMgr, &gMessageCounterManager, &deviceStorage, &fabricTable));
+    NL_TEST_ASSERT(inSuite,
+                   CHIP_NO_ERROR ==
+                       sessionManager.Init(&ctx.GetSystemLayer(), &ctx.GetTransportMgr(), &gMessageCounterManager, &deviceStorage,
+                                           &fabricTable));
 
     callback.mSuite = inSuite;
 
@@ -149,23 +136,15 @@ void CheckMessageTest(nlTestSuite * inSuite, void * inContext)
 
     FabricIndex aliceFabricIndex;
     FabricInfo aliceFabric;
-    aliceFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root01_Chip, TestCerts::sTestCert_Root01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA01_Chip, TestCerts::sTestCert_ICA01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_Chip, TestCerts::sTestCert_Node01_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PublicKey, TestCerts::sTestCert_Node01_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PrivateKey, TestCerts::sTestCert_Node01_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(aliceFabric, &aliceFabricIndex));
+    aliceFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA1CertAsset().mCert,
+                                    GetNodeA1CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(aliceFabric, &aliceFabricIndex));
 
     FabricIndex bobFabricIndex;
     FabricInfo bobFabric;
-    bobFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root02_Chip, TestCerts::sTestCert_Root02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA02_Chip, TestCerts::sTestCert_ICA02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_Chip, TestCerts::sTestCert_Node02_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PublicKey, TestCerts::sTestCert_Node02_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PrivateKey, TestCerts::sTestCert_Node02_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(bobFabric, &bobFabricIndex));
+    bobFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA2CertAsset().mCert,
+                                  GetNodeA2CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(bobFabric, &bobFabricIndex));
 
     SessionHolder aliceToBobSession;
     err = sessionManager.InjectPaseSessionWithTestKey(aliceToBobSession, 2,
@@ -191,12 +170,13 @@ void CheckMessageTest(nlTestSuite * inSuite, void * inContext)
     payloadHeader.SetMessageType(chip::Protocols::Echo::MsgType::EchoRequest);
 
     EncryptedPacketBufferHandle preparedMessage;
-    err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(buffer), preparedMessage);
+    err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(buffer), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
 
     // Let's send the max sized message and make sure it is received
@@ -205,12 +185,13 @@ void CheckMessageTest(nlTestSuite * inSuite, void * inContext)
 
     callback.LargeMessageSent = true;
 
-    err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(large_buffer), preparedMessage);
+    err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(large_buffer), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 2);
 
     uint16_t large_payload_len = sizeof(LARGE_PAYLOAD);
@@ -221,7 +202,8 @@ void CheckMessageTest(nlTestSuite * inSuite, void * inContext)
 
     callback.LargeMessageSent = true;
 
-    err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(extra_large_buffer), preparedMessage);
+    err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(extra_large_buffer),
+                                        preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_ERROR_MESSAGE_TOO_LONG);
 
     sessionManager.Shutdown();
@@ -243,18 +225,16 @@ void SendEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
     IPAddress::FromString("::1", addr);
     CHIP_ERROR err = CHIP_NO_ERROR;
 
-    TransportMgr<LoopbackTransport> transportMgr;
     FabricTable fabricTable;
     SessionManager sessionManager;
     secure_channel::MessageCounterManager gMessageCounterManager;
     chip::TestPersistentStorageDelegate deviceStorage;
 
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == transportMgr.Init("LOOPBACK"));
     NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.Init(&deviceStorage));
-    NL_TEST_ASSERT(
-        inSuite,
-        CHIP_NO_ERROR ==
-            sessionManager.Init(&ctx.GetSystemLayer(), &transportMgr, &gMessageCounterManager, &deviceStorage, &fabricTable));
+    NL_TEST_ASSERT(inSuite,
+                   CHIP_NO_ERROR ==
+                       sessionManager.Init(&ctx.GetSystemLayer(), &ctx.GetTransportMgr(), &gMessageCounterManager, &deviceStorage,
+                                           &fabricTable));
 
     callback.mSuite = inSuite;
 
@@ -264,23 +244,15 @@ void SendEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
 
     FabricIndex aliceFabricIndex;
     FabricInfo aliceFabric;
-    aliceFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root01_Chip, TestCerts::sTestCert_Root01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA01_Chip, TestCerts::sTestCert_ICA01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_Chip, TestCerts::sTestCert_Node01_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PublicKey, TestCerts::sTestCert_Node01_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PrivateKey, TestCerts::sTestCert_Node01_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(aliceFabric, &aliceFabricIndex));
+    aliceFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA1CertAsset().mCert,
+                                    GetNodeA1CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(aliceFabric, &aliceFabricIndex));
 
     FabricIndex bobFabricIndex;
     FabricInfo bobFabric;
-    bobFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root02_Chip, TestCerts::sTestCert_Root02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA02_Chip, TestCerts::sTestCert_ICA02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_Chip, TestCerts::sTestCert_Node02_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PublicKey, TestCerts::sTestCert_Node02_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PrivateKey, TestCerts::sTestCert_Node02_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(bobFabric, &bobFabricIndex));
+    bobFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA2CertAsset().mCert,
+                                  GetNodeA2CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(bobFabric, &bobFabricIndex));
 
     SessionHolder aliceToBobSession;
     err = sessionManager.InjectPaseSessionWithTestKey(aliceToBobSession, 2,
@@ -308,21 +280,23 @@ void SendEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
 
     payloadHeader.SetInitiator(true);
 
-    err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(buffer), preparedMessage);
+    err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(buffer), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
-    // Reset receive side message counter, or duplicated message will be denied.
-    Transport::SecureSession * session = bobToAliceSession.Get()->AsSecureSession();
-    session->GetSessionMessageCounter().GetPeerMessageCounter().SetCounter(1);
-
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    // Reset receive side message counter, or duplicated message will be denied.
+    Transport::SecureSession * session = bobToAliceSession.Get().Value()->AsSecureSession();
+    session->GetSessionMessageCounter().GetPeerMessageCounter().SetCounter(1);
+
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 2);
 
     sessionManager.Shutdown();
@@ -344,18 +318,16 @@ void SendBadEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
     IPAddress::FromString("::1", addr);
     CHIP_ERROR err = CHIP_NO_ERROR;
 
-    TransportMgr<LoopbackTransport> transportMgr;
     FabricTable fabricTable;
     SessionManager sessionManager;
     secure_channel::MessageCounterManager gMessageCounterManager;
     chip::TestPersistentStorageDelegate deviceStorage;
 
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == transportMgr.Init("LOOPBACK"));
     NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.Init(&deviceStorage));
-    NL_TEST_ASSERT(
-        inSuite,
-        CHIP_NO_ERROR ==
-            sessionManager.Init(&ctx.GetSystemLayer(), &transportMgr, &gMessageCounterManager, &deviceStorage, &fabricTable));
+    NL_TEST_ASSERT(inSuite,
+                   CHIP_NO_ERROR ==
+                       sessionManager.Init(&ctx.GetSystemLayer(), &ctx.GetTransportMgr(), &gMessageCounterManager, &deviceStorage,
+                                           &fabricTable));
 
     callback.mSuite = inSuite;
 
@@ -365,23 +337,15 @@ void SendBadEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
 
     FabricIndex aliceFabricIndex;
     FabricInfo aliceFabric;
-    aliceFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root01_Chip, TestCerts::sTestCert_Root01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA01_Chip, TestCerts::sTestCert_ICA01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_Chip, TestCerts::sTestCert_Node01_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PublicKey, TestCerts::sTestCert_Node01_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PrivateKey, TestCerts::sTestCert_Node01_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(aliceFabric, &aliceFabricIndex));
+    aliceFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA1CertAsset().mCert,
+                                    GetNodeA1CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(aliceFabric, &aliceFabricIndex));
 
     FabricIndex bobFabricIndex;
     FabricInfo bobFabric;
-    bobFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root02_Chip, TestCerts::sTestCert_Root02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA02_Chip, TestCerts::sTestCert_ICA02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_Chip, TestCerts::sTestCert_Node02_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PublicKey, TestCerts::sTestCert_Node02_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PrivateKey, TestCerts::sTestCert_Node02_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(bobFabric, &bobFabricIndex));
+    bobFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA2CertAsset().mCert,
+                                  GetNodeA2CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(bobFabric, &bobFabricIndex));
 
     SessionHolder aliceToBobSession;
     err = sessionManager.InjectPaseSessionWithTestKey(aliceToBobSession, 2,
@@ -409,17 +373,18 @@ void SendBadEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
 
     payloadHeader.SetInitiator(true);
 
-    err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(buffer), preparedMessage);
+    err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(buffer), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
 
     /* -------------------------------------------------------------------------------------------*/
     // Reset receive side message counter, or duplicated message will be denied.
-    Transport::SecureSession * session = bobToAliceSession.Get()->AsSecureSession();
+    Transport::SecureSession * session = bobToAliceSession.Get().Value()->AsSecureSession();
     session->GetSessionMessageCounter().GetPeerMessageCounter().SetCounter(1);
 
     PacketHeader packetHeader;
@@ -432,9 +397,10 @@ void SendBadEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
     packetHeader.SetMessageCounter(messageCounter + 1);
     NL_TEST_ASSERT(inSuite, badMessageCounterMsg.InsertPacketHeader(packetHeader) == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), badMessageCounterMsg);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), badMessageCounterMsg);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
 
     /* -------------------------------------------------------------------------------------------*/
@@ -448,126 +414,21 @@ void SendBadEncryptedPacketTest(nlTestSuite * inSuite, void * inContext)
     packetHeader.SetSessionId(3);
     NL_TEST_ASSERT(inSuite, badKeyIdMsg.InsertPacketHeader(packetHeader) == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), badKeyIdMsg);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), badKeyIdMsg);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
+
+    ctx.DrainAndServiceIO();
+    NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
 
     /* -------------------------------------------------------------------------------------------*/
     session->GetSessionMessageCounter().GetPeerMessageCounter().SetCounter(1);
 
-    NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
-
     // Send the correct encrypted msg
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 2);
-
-    sessionManager.Shutdown();
-}
-
-class SecurePairingUsingTestSecret : public PairingSession
-{
-public:
-    SecurePairingUsingTestSecret() : PairingSession(Transport::SecureSession::Type::kPASE)
-    {
-        // Do not set to 0 to prevent an unwanted unsecured session
-        // since the session type is unknown.
-        SetPeerSessionId(1);
-    }
-
-    void Init(SessionManager & sessionManager)
-    {
-        // Do not set to 0 to prevent an unwanted unsecured session
-        // since the session type is unknown.
-        AllocateSecureSession(sessionManager, mLocalSessionId);
-    }
-
-    SecurePairingUsingTestSecret(uint16_t peerSessionId, uint16_t localSessionId, SessionManager & sessionManager) :
-        PairingSession(Transport::SecureSession::Type::kPASE), mLocalSessionId(localSessionId)
-    {
-        AllocateSecureSession(sessionManager, localSessionId);
-        SetPeerSessionId(peerSessionId);
-    }
-
-    CHIP_ERROR DeriveSecureSession(CryptoContext & session, CryptoContext::SessionRole role) override
-    {
-        size_t secretLen = strlen(kTestSecret);
-        return session.InitFromSecret(ByteSpan(reinterpret_cast<const uint8_t *>(kTestSecret), secretLen), ByteSpan(nullptr, 0),
-                                      CryptoContext::SessionInfoType::kSessionEstablishment, role);
-    }
-
-private:
-    // Do not set to 0 to prevent an unwanted unsecured session
-    // since the session type is unknown.
-    uint16_t mLocalSessionId = 1;
-    const char * kTestSecret = CHIP_CONFIG_TEST_SHARED_SECRET_VALUE;
-};
-
-void StaleConnectionDropTest(nlTestSuite * inSuite, void * inContext)
-{
-    TestContext & ctx = *reinterpret_cast<TestContext *>(inContext);
-
-    constexpr NodeId kSourceNodeId = 123654;
-
-    IPAddress addr;
-    IPAddress::FromString("::1", addr);
-    CHIP_ERROR err = CHIP_NO_ERROR;
-
-    TransportMgr<LoopbackTransport> transportMgr;
-    FabricTable fabricTable;
-    SessionManager sessionManager;
-    secure_channel::MessageCounterManager gMessageCounterManager;
-    chip::TestPersistentStorageDelegate deviceStorage;
-
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == transportMgr.Init("LOOPBACK"));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.Init(&deviceStorage));
-    NL_TEST_ASSERT(
-        inSuite,
-        CHIP_NO_ERROR ==
-            sessionManager.Init(&ctx.GetSystemLayer(), &transportMgr, &gMessageCounterManager, &deviceStorage, &fabricTable));
-
-    Optional<Transport::PeerAddress> peer(Transport::PeerAddress::UDP(addr, CHIP_PORT));
-    TestSessionReleaseCallback callback;
-    SessionHolderWithDelegate session1(callback);
-    SessionHolderWithDelegate session2(callback);
-    SessionHolderWithDelegate session3(callback);
-    SessionHolderWithDelegate session4(callback);
-    SessionHolderWithDelegate session5(callback);
-
-    // First pairing
-    callback.mOldConnectionDropped = false;
-    SecurePairingUsingTestSecret pairing1(1, 1, sessionManager);
-    err = sessionManager.NewPairing(session1, peer, kSourceNodeId, &pairing1, CryptoContext::SessionRole::kInitiator, 1);
-    NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
-    NL_TEST_ASSERT(inSuite, !callback.mOldConnectionDropped);
-
-    // New pairing with different peer node ID and different local key ID (same peer key ID)
-    callback.mOldConnectionDropped = false;
-    SecurePairingUsingTestSecret pairing2(1, 2, sessionManager);
-    err = sessionManager.NewPairing(session2, peer, kSourceNodeId, &pairing2, CryptoContext::SessionRole::kResponder, 0);
-    NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
-    NL_TEST_ASSERT(inSuite, !callback.mOldConnectionDropped);
-
-    // New pairing with undefined node ID and different local key ID (same peer key ID)
-    callback.mOldConnectionDropped = false;
-    SecurePairingUsingTestSecret pairing3(1, 3, sessionManager);
-    err = sessionManager.NewPairing(session3, peer, kUndefinedNodeId, &pairing3, CryptoContext::SessionRole::kResponder, 0);
-    NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
-    NL_TEST_ASSERT(inSuite, !callback.mOldConnectionDropped);
-
-    // New pairing with same local key ID, and a given node ID
-    callback.mOldConnectionDropped = false;
-    SecurePairingUsingTestSecret pairing4(1, 2, sessionManager);
-    err = sessionManager.NewPairing(session4, peer, kSourceNodeId, &pairing4, CryptoContext::SessionRole::kResponder, 0);
-    NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
-    NL_TEST_ASSERT(inSuite, callback.mOldConnectionDropped);
-
-    // New pairing with same local key ID, and undefined node ID
-    callback.mOldConnectionDropped = false;
-    SecurePairingUsingTestSecret pairing5(1, 1, sessionManager);
-    err = sessionManager.NewPairing(session5, peer, kUndefinedNodeId, &pairing5, CryptoContext::SessionRole::kResponder, 0);
-    NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
-    NL_TEST_ASSERT(inSuite, callback.mOldConnectionDropped);
 
     sessionManager.Shutdown();
 }
@@ -588,18 +449,16 @@ void SendPacketWithOldCounterTest(nlTestSuite * inSuite, void * inContext)
     IPAddress::FromString("::1", addr);
     CHIP_ERROR err = CHIP_NO_ERROR;
 
-    TransportMgr<LoopbackTransport> transportMgr;
     FabricTable fabricTable;
     SessionManager sessionManager;
     secure_channel::MessageCounterManager gMessageCounterManager;
     chip::TestPersistentStorageDelegate deviceStorage;
 
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == transportMgr.Init("LOOPBACK"));
     NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.Init(&deviceStorage));
-    NL_TEST_ASSERT(
-        inSuite,
-        CHIP_NO_ERROR ==
-            sessionManager.Init(&ctx.GetSystemLayer(), &transportMgr, &gMessageCounterManager, &deviceStorage, &fabricTable));
+    NL_TEST_ASSERT(inSuite,
+                   CHIP_NO_ERROR ==
+                       sessionManager.Init(&ctx.GetSystemLayer(), &ctx.GetTransportMgr(), &gMessageCounterManager, &deviceStorage,
+                                           &fabricTable));
 
     callback.mSuite = inSuite;
 
@@ -609,23 +468,15 @@ void SendPacketWithOldCounterTest(nlTestSuite * inSuite, void * inContext)
 
     FabricIndex aliceFabricIndex;
     FabricInfo aliceFabric;
-    aliceFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root01_Chip, TestCerts::sTestCert_Root01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA01_Chip, TestCerts::sTestCert_ICA01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_Chip, TestCerts::sTestCert_Node01_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PublicKey, TestCerts::sTestCert_Node01_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PrivateKey, TestCerts::sTestCert_Node01_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(aliceFabric, &aliceFabricIndex));
+    aliceFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA1CertAsset().mCert,
+                                    GetNodeA1CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(aliceFabric, &aliceFabricIndex));
 
     FabricIndex bobFabricIndex;
     FabricInfo bobFabric;
-    bobFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root02_Chip, TestCerts::sTestCert_Root02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA02_Chip, TestCerts::sTestCert_ICA02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_Chip, TestCerts::sTestCert_Node02_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PublicKey, TestCerts::sTestCert_Node02_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PrivateKey, TestCerts::sTestCert_Node02_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(bobFabric, &bobFabricIndex));
+    bobFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA2CertAsset().mCert,
+                                  GetNodeA2CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(bobFabric, &bobFabricIndex));
 
     SessionHolder aliceToBobSession;
     err = sessionManager.InjectPaseSessionWithTestKey(aliceToBobSession, 2,
@@ -652,12 +503,13 @@ void SendPacketWithOldCounterTest(nlTestSuite * inSuite, void * inContext)
 
     payloadHeader.SetInitiator(true);
 
-    err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(buffer), preparedMessage);
+    err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(buffer), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
 
     // Now advance our message counter by 5.
@@ -667,20 +519,22 @@ void SendPacketWithOldCounterTest(nlTestSuite * inSuite, void * inContext)
         buffer = chip::MessagePacketBuffer::NewWithData(PAYLOAD, payload_len);
         NL_TEST_ASSERT(inSuite, !buffer.IsNull());
 
-        err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(buffer), newMessage);
+        err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(buffer), newMessage);
         NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
     }
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), newMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), newMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 2);
 
     // Now resend our original message.  It should be rejected as a duplicate.
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 2);
 
     sessionManager.Shutdown();
@@ -702,18 +556,16 @@ void SendPacketWithTooOldCounterTest(nlTestSuite * inSuite, void * inContext)
     IPAddress::FromString("::1", addr);
     CHIP_ERROR err = CHIP_NO_ERROR;
 
-    TransportMgr<LoopbackTransport> transportMgr;
     FabricTable fabricTable;
     SessionManager sessionManager;
     secure_channel::MessageCounterManager gMessageCounterManager;
     chip::TestPersistentStorageDelegate deviceStorage;
 
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == transportMgr.Init("LOOPBACK"));
     NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.Init(&deviceStorage));
-    NL_TEST_ASSERT(
-        inSuite,
-        CHIP_NO_ERROR ==
-            sessionManager.Init(&ctx.GetSystemLayer(), &transportMgr, &gMessageCounterManager, &deviceStorage, &fabricTable));
+    NL_TEST_ASSERT(inSuite,
+                   CHIP_NO_ERROR ==
+                       sessionManager.Init(&ctx.GetSystemLayer(), &ctx.GetTransportMgr(), &gMessageCounterManager, &deviceStorage,
+                                           &fabricTable));
 
     callback.mSuite = inSuite;
 
@@ -723,23 +575,15 @@ void SendPacketWithTooOldCounterTest(nlTestSuite * inSuite, void * inContext)
 
     FabricIndex aliceFabricIndex;
     FabricInfo aliceFabric;
-    aliceFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root01_Chip, TestCerts::sTestCert_Root01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA01_Chip, TestCerts::sTestCert_ICA01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_Chip, TestCerts::sTestCert_Node01_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PublicKey, TestCerts::sTestCert_Node01_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node01_01_PrivateKey, TestCerts::sTestCert_Node01_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(aliceFabric, &aliceFabricIndex));
+    aliceFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA1CertAsset().mCert,
+                                    GetNodeA1CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(aliceFabric, &aliceFabricIndex));
 
     FabricIndex bobFabricIndex;
     FabricInfo bobFabric;
-    bobFabric.TestOnlyBuildFabric(
-        ByteSpan(TestCerts::sTestCert_Root02_Chip, TestCerts::sTestCert_Root02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_ICA02_Chip, TestCerts::sTestCert_ICA02_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_Chip, TestCerts::sTestCert_Node02_01_Chip_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PublicKey, TestCerts::sTestCert_Node02_01_PublicKey_Len),
-        ByteSpan(TestCerts::sTestCert_Node02_01_PrivateKey, TestCerts::sTestCert_Node02_01_PrivateKey_Len));
-    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabric(bobFabric, &bobFabricIndex));
+    bobFabric.TestOnlyBuildFabric(GetRootACertAsset().mCert, GetIAA1CertAsset().mCert, GetNodeA2CertAsset().mCert,
+                                  GetNodeA2CertAsset().mKey);
+    NL_TEST_ASSERT(inSuite, CHIP_NO_ERROR == fabricTable.AddNewFabricForTest(bobFabric, &bobFabricIndex));
 
     SessionHolder aliceToBobSession;
     err = sessionManager.InjectPaseSessionWithTestKey(aliceToBobSession, 2,
@@ -766,12 +610,13 @@ void SendPacketWithTooOldCounterTest(nlTestSuite * inSuite, void * inContext)
 
     payloadHeader.SetInitiator(true);
 
-    err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(buffer), preparedMessage);
+    err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(buffer), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 1);
 
     // Now advance our message counter by at least
@@ -783,20 +628,22 @@ void SendPacketWithTooOldCounterTest(nlTestSuite * inSuite, void * inContext)
         buffer = chip::MessagePacketBuffer::NewWithData(PAYLOAD, payload_len);
         NL_TEST_ASSERT(inSuite, !buffer.IsNull());
 
-        err = sessionManager.PrepareMessage(aliceToBobSession.Get(), payloadHeader, std::move(buffer), newMessage);
+        err = sessionManager.PrepareMessage(aliceToBobSession.Get().Value(), payloadHeader, std::move(buffer), newMessage);
         NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
     }
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), newMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), newMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 2);
 
     // Now resend our original message.  It should be rejected as a duplicate.
 
-    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get(), preparedMessage);
+    err = sessionManager.SendPreparedMessage(aliceToBobSession.Get().Value(), preparedMessage);
     NL_TEST_ASSERT(inSuite, err == CHIP_NO_ERROR);
 
+    ctx.DrainAndServiceIO();
     NL_TEST_ASSERT(inSuite, callback.ReceiveHandlerCallCount == 2);
 
     sessionManager.Shutdown();
@@ -809,7 +656,7 @@ static void RandomSessionIdAllocatorOffset(nlTestSuite * inSuite, SessionManager
     const int bound = rand() % max;
     for (int i = 0; i < bound; ++i)
     {
-        auto handle = sessionManager.AllocateSession();
+        auto handle = sessionManager.AllocateSession(Transport::SecureSession::Type::kPASE);
         NL_TEST_ASSERT(inSuite, handle.HasValue());
         sessionManager.ExpirePairing(handle.Value());
     }
@@ -818,23 +665,15 @@ static void RandomSessionIdAllocatorOffset(nlTestSuite * inSuite, SessionManager
 void SessionAllocationTest(nlTestSuite * inSuite, void * inContext)
 {
     SessionManager sessionManager;
-    TestSessionReleaseCallback callback;
 
     // Allocate a session.
     uint16_t sessionId1;
     {
-        auto handle = sessionManager.AllocateSession();
+        auto handle = sessionManager.AllocateSession(Transport::SecureSession::Type::kPASE);
         NL_TEST_ASSERT(inSuite, handle.HasValue());
-        SessionHolderWithDelegate session(handle.Value(), callback);
+        SessionHolder session;
+        session.GrabPairing(handle.Value());
         sessionId1 = session->AsSecureSession()->GetLocalSessionId();
-    }
-
-    // Allocate a session at a colliding ID, verify eviction.
-    {
-        callback.mOldConnectionDropped = false;
-        auto handle                    = sessionManager.AllocateSession(sessionId1);
-        NL_TEST_ASSERT(inSuite, handle.HasValue());
-        SessionHolderWithDelegate session(handle.Value(), callback);
     }
 
     // Verify that we increment session ID by 1 for each allocation, except for
@@ -842,7 +681,7 @@ void SessionAllocationTest(nlTestSuite * inSuite, void * inContext)
     auto prevSessionId = sessionId1;
     for (uint32_t i = 0; i < 10; ++i)
     {
-        auto handle = sessionManager.AllocateSession();
+        auto handle = sessionManager.AllocateSession(Transport::SecureSession::Type::kPASE);
         if (!handle.HasValue())
         {
             break;
@@ -863,7 +702,7 @@ void SessionAllocationTest(nlTestSuite * inSuite, void * inContext)
     // sessions are immediately freed.
     for (uint32_t i = 0; i < UINT16_MAX + 10; ++i)
     {
-        auto handle = sessionManager.AllocateSession();
+        auto handle = sessionManager.AllocateSession(Transport::SecureSession::Type::kPASE);
         NL_TEST_ASSERT(inSuite, handle.HasValue());
         auto sessionId = handle.Value()->AsSecureSession()->GetLocalSessionId();
         NL_TEST_ASSERT(inSuite, sessionId - prevSessionId == 1 || (sessionId == 1 && prevSessionId == 65535));
@@ -884,7 +723,7 @@ void SessionAllocationTest(nlTestSuite * inSuite, void * inContext)
         for (size_t h = 0; h < numHandles; ++h)
         {
             constexpr int maxOffset = 5000;
-            handles[h]              = sessionManager.AllocateSession();
+            handles[h]              = sessionManager.AllocateSession(Transport::SecureSession::Type::kPASE);
             NL_TEST_ASSERT(inSuite, handles[h].HasValue());
             sessionIds[h] = handles[h].Value()->AsSecureSession()->GetLocalSessionId();
             RandomSessionIdAllocatorOffset(inSuite, sessionManager, maxOffset);
@@ -900,7 +739,7 @@ void SessionAllocationTest(nlTestSuite * inSuite, void * inContext)
         // these collide either.
         for (int j = 0; j < UINT16_MAX; ++j)
         {
-            auto handle = sessionManager.AllocateSession();
+            auto handle = sessionManager.AllocateSession(Transport::SecureSession::Type::kPASE);
             NL_TEST_ASSERT(inSuite, handle.HasValue());
             auto potentialCollision = handle.Value()->AsSecureSession()->GetLocalSessionId();
             for (size_t h = 0; h < numHandles; ++h)
@@ -932,7 +771,6 @@ const nlTest sTests[] =
     NL_TEST_DEF("Message Self Test",              CheckMessageTest),
     NL_TEST_DEF("Send Encrypted Packet Test",     SendEncryptedPacketTest),
     NL_TEST_DEF("Send Bad Encrypted Packet Test", SendBadEncryptedPacketTest),
-    NL_TEST_DEF("Drop stale connection Test",     StaleConnectionDropTest),
     NL_TEST_DEF("Old counter Test",               SendPacketWithOldCounterTest),
     NL_TEST_DEF("Too-old counter Test",           SendPacketWithTooOldCounterTest),
     NL_TEST_DEF("Session Allocation Test",        SessionAllocationTest),
@@ -979,6 +817,8 @@ int Finalize(void * aContext)
  */
 int TestSessionManager()
 {
+    TestContext sContext;
+
     // Run test suit against one context
     nlTestRunner(&sSuite, &sContext);
 

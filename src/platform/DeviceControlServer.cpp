@@ -40,14 +40,14 @@ CHIP_ERROR DeviceControlServer::CommissioningComplete(NodeId peerNodeId, FabricI
 
     ChipDeviceEvent event;
 
-    event.Type                                  = DeviceEventType::kCommissioningComplete;
-    event.CommissioningComplete.PeerNodeId      = peerNodeId;
-    event.CommissioningComplete.PeerFabricIndex = accessingFabricIndex;
+    event.Type                              = DeviceEventType::kCommissioningComplete;
+    event.CommissioningComplete.nodeId      = peerNodeId;
+    event.CommissioningComplete.fabricIndex = accessingFabricIndex;
 
     return PlatformMgr().PostEvent(&event);
 }
 
-CHIP_ERROR DeviceControlServer::SetRegulatoryConfig(uint8_t location, const CharSpan & countryCode, uint64_t breadcrumb)
+CHIP_ERROR DeviceControlServer::SetRegulatoryConfig(uint8_t location, const CharSpan & countryCode)
 {
     CHIP_ERROR err = CHIP_NO_ERROR;
 
@@ -55,9 +55,6 @@ CHIP_ERROR DeviceControlServer::SetRegulatoryConfig(uint8_t location, const Char
     SuccessOrExit(err);
 
     err = ConfigurationMgr().StoreCountryCode(countryCode.data(), countryCode.size());
-    SuccessOrExit(err);
-
-    err = ConfigurationMgr().StoreBreadcrumb(breadcrumb);
     SuccessOrExit(err);
 
 exit:

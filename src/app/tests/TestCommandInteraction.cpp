@@ -93,8 +93,7 @@ InteractionModel::Status ServerClusterCommandExists(const ConcreteCommandPath & 
 void DispatchSingleClusterCommand(const ConcreteCommandPath & aCommandPath, chip::TLV::TLVReader & aReader,
                                   CommandHandler * apCommandObj)
 {
-    ChipLogDetail(Controller,
-                  "Received Cluster Command: Endpoint=%" PRIx16 " Cluster=" ChipLogFormatMEI " Command=" ChipLogFormatMEI,
+    ChipLogDetail(Controller, "Received Cluster Command: Endpoint=%x Cluster=" ChipLogFormatMEI " Command=" ChipLogFormatMEI,
                   aCommandPath.mEndpointId, ChipLogValueMEI(aCommandPath.mClusterId), ChipLogValueMEI(aCommandPath.mCommandId));
 
     if (asyncCommand)
@@ -129,8 +128,8 @@ public:
     {
         IgnoreUnusedVariable(apCommandSender);
         IgnoreUnusedVariable(aData);
-        ChipLogDetail(Controller, "Received Cluster Command: Cluster=%" PRIx32 " Command=%" PRIx32 " Endpoint=%" PRIx16,
-                      aPath.mClusterId, aPath.mCommandId, aPath.mEndpointId);
+        ChipLogDetail(Controller, "Received Cluster Command: Cluster=%" PRIx32 " Command=%" PRIx32 " Endpoint=%x", aPath.mClusterId,
+                      aPath.mCommandId, aPath.mEndpointId);
         onResponseCalledTimes++;
     }
     void OnError(const chip::app::CommandSender * apCommandSender, CHIP_ERROR aError) override
@@ -259,7 +258,7 @@ void TestCommandInteraction::GenerateInvokeRequest(nlTestSuite * apSuite, void *
     {
         chip::TLV::TLVWriter * pWriter = commandDataIBBuilder.GetWriter();
         chip::TLV::TLVType dummyType   = chip::TLV::kTLVType_NotSpecified;
-        err = pWriter->StartContainer(chip::TLV::ContextTag(chip::to_underlying(CommandDataIB::Tag::kData)),
+        err = pWriter->StartContainer(chip::TLV::ContextTag(chip::to_underlying(CommandDataIB::Tag::kFields)),
                                       chip::TLV::kTLVType_Structure, dummyType);
         NL_TEST_ASSERT(apSuite, err == CHIP_NO_ERROR);
 
@@ -316,7 +315,7 @@ void TestCommandInteraction::GenerateInvokeResponse(nlTestSuite * apSuite, void 
     {
         chip::TLV::TLVWriter * pWriter = commandDataIBBuilder.GetWriter();
         chip::TLV::TLVType dummyType   = chip::TLV::kTLVType_NotSpecified;
-        err = pWriter->StartContainer(chip::TLV::ContextTag(chip::to_underlying(CommandDataIB::Tag::kData)),
+        err = pWriter->StartContainer(chip::TLV::ContextTag(chip::to_underlying(CommandDataIB::Tag::kFields)),
                                       chip::TLV::kTLVType_Structure, dummyType);
         NL_TEST_ASSERT(apSuite, err == CHIP_NO_ERROR);
 
@@ -856,11 +855,11 @@ void TestCommandInteraction::TestCommandHandlerRejectMultipleCommands(nlTestSuit
             CommandPathIB::Builder & path = invokeRequest.CreatePath();
             NL_TEST_ASSERT(apSuite, CHIP_NO_ERROR == invokeRequest.GetError());
             NL_TEST_ASSERT(apSuite, CHIP_NO_ERROR == path.Encode(commandPathParams));
-            NL_TEST_ASSERT(apSuite,
-                           CHIP_NO_ERROR ==
-                               invokeRequest.GetWriter()->StartContainer(TLV::ContextTag(to_underlying(CommandDataIB::Tag::kData)),
-                                                                         TLV::kTLVType_Structure,
-                                                                         commandSender.mDataElementContainerType));
+            NL_TEST_ASSERT(
+                apSuite,
+                CHIP_NO_ERROR ==
+                    invokeRequest.GetWriter()->StartContainer(TLV::ContextTag(to_underlying(CommandDataIB::Tag::kFields)),
+                                                              TLV::kTLVType_Structure, commandSender.mDataElementContainerType));
             NL_TEST_ASSERT(apSuite, CHIP_NO_ERROR == invokeRequest.GetWriter()->PutBoolean(chip::TLV::ContextTag(1), true));
             NL_TEST_ASSERT(apSuite,
                            CHIP_NO_ERROR == invokeRequest.GetWriter()->EndContainer(commandSender.mDataElementContainerType));
@@ -925,7 +924,7 @@ nlTestSuite sSuite =
 {
     "TestCommandInteraction",
     &sTests[0],
-    TestContext::InitializeAsync,
+    TestContext::Initialize,
     TestContext::Finalize
 };
 // clang-format on

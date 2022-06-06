@@ -160,24 +160,22 @@ public class ClusterWriteMapping {
     Map<String, InteractionInfo> writeChannelInteractionInfo = new LinkedHashMap<>();
     writeAttributeMap.put("channel", writeChannelInteractionInfo);
     Map<String, InteractionInfo> writeColorControlInteractionInfo = new LinkedHashMap<>();
-    Map<String, CommandParameterInfo> writeColorControlColorControlOptionsCommandParams =
+    Map<String, CommandParameterInfo> writeColorControlOptionsCommandParams =
         new LinkedHashMap<String, CommandParameterInfo>();
-    CommandParameterInfo colorControlcolorControlOptionsCommandParameterInfo =
+    CommandParameterInfo colorControloptionsCommandParameterInfo =
         new CommandParameterInfo("value", Integer.class);
-    writeColorControlColorControlOptionsCommandParams.put(
-        "value", colorControlcolorControlOptionsCommandParameterInfo);
-    InteractionInfo writeColorControlColorControlOptionsAttributeInteractionInfo =
+    writeColorControlOptionsCommandParams.put("value", colorControloptionsCommandParameterInfo);
+    InteractionInfo writeColorControlOptionsAttributeInteractionInfo =
         new InteractionInfo(
             (cluster, callback, commandArguments) -> {
               ((ChipClusters.ColorControlCluster) cluster)
-                  .writeColorControlOptionsAttribute(
+                  .writeOptionsAttribute(
                       (DefaultClusterCallback) callback, (Integer) commandArguments.get("value"));
             },
             () -> new ClusterInfoMapping.DelegatedDefaultClusterCallback(),
-            writeColorControlColorControlOptionsCommandParams);
+            writeColorControlOptionsCommandParams);
     writeColorControlInteractionInfo.put(
-        "writeColorControlOptionsAttribute",
-        writeColorControlColorControlOptionsAttributeInteractionInfo);
+        "writeOptionsAttribute", writeColorControlOptionsAttributeInteractionInfo);
     Map<String, CommandParameterInfo> writeColorControlWhitePointXCommandParams =
         new LinkedHashMap<String, CommandParameterInfo>();
     CommandParameterInfo colorControlwhitePointXCommandParameterInfo =
@@ -531,6 +529,42 @@ public class ClusterWriteMapping {
     writeDoorLockInteractionInfo.put(
         "writeWrongCodeEntryLimitAttribute",
         writeDoorLockWrongCodeEntryLimitAttributeInteractionInfo);
+    Map<String, CommandParameterInfo> writeDoorLockUserCodeTemporaryDisableTimeCommandParams =
+        new LinkedHashMap<String, CommandParameterInfo>();
+    CommandParameterInfo doorLockuserCodeTemporaryDisableTimeCommandParameterInfo =
+        new CommandParameterInfo("value", Integer.class);
+    writeDoorLockUserCodeTemporaryDisableTimeCommandParams.put(
+        "value", doorLockuserCodeTemporaryDisableTimeCommandParameterInfo);
+    InteractionInfo writeDoorLockUserCodeTemporaryDisableTimeAttributeInteractionInfo =
+        new InteractionInfo(
+            (cluster, callback, commandArguments) -> {
+              ((ChipClusters.DoorLockCluster) cluster)
+                  .writeUserCodeTemporaryDisableTimeAttribute(
+                      (DefaultClusterCallback) callback, (Integer) commandArguments.get("value"));
+            },
+            () -> new ClusterInfoMapping.DelegatedDefaultClusterCallback(),
+            writeDoorLockUserCodeTemporaryDisableTimeCommandParams);
+    writeDoorLockInteractionInfo.put(
+        "writeUserCodeTemporaryDisableTimeAttribute",
+        writeDoorLockUserCodeTemporaryDisableTimeAttributeInteractionInfo);
+    Map<String, CommandParameterInfo> writeDoorLockRequirePINforRemoteOperationCommandParams =
+        new LinkedHashMap<String, CommandParameterInfo>();
+    CommandParameterInfo doorLockrequirePINforRemoteOperationCommandParameterInfo =
+        new CommandParameterInfo("value", Boolean.class);
+    writeDoorLockRequirePINforRemoteOperationCommandParams.put(
+        "value", doorLockrequirePINforRemoteOperationCommandParameterInfo);
+    InteractionInfo writeDoorLockRequirePINforRemoteOperationAttributeInteractionInfo =
+        new InteractionInfo(
+            (cluster, callback, commandArguments) -> {
+              ((ChipClusters.DoorLockCluster) cluster)
+                  .writeRequirePINforRemoteOperationAttribute(
+                      (DefaultClusterCallback) callback, (Boolean) commandArguments.get("value"));
+            },
+            () -> new ClusterInfoMapping.DelegatedDefaultClusterCallback(),
+            writeDoorLockRequirePINforRemoteOperationCommandParams);
+    writeDoorLockInteractionInfo.put(
+        "writeRequirePINforRemoteOperationAttribute",
+        writeDoorLockRequirePINforRemoteOperationAttributeInteractionInfo);
     writeAttributeMap.put("doorLock", writeDoorLockInteractionInfo);
     Map<String, InteractionInfo> writeElectricalMeasurementInteractionInfo = new LinkedHashMap<>();
     writeAttributeMap.put("electricalMeasurement", writeElectricalMeasurementInteractionInfo);

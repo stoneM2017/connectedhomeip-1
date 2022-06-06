@@ -25,6 +25,7 @@
 #include <lib/support/CodeUtils.h>
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/CommissionableDataProvider.h>
+#include <platform/DeviceInstanceInfoProvider.h>
 
 using chip::DeviceLayer::ConfigurationMgr;
 
@@ -49,7 +50,7 @@ static CHIP_ERROR ConfigGetVendorId(bool printHeader)
     {
         streamer_printf(sout, "VendorId:        ");
     }
-    streamer_printf(sout, "%" PRIu16 " (0x%" PRIX16 ")\r\n", value16, value16);
+    streamer_printf(sout, "%u (0x%X)\r\n", value16, value16);
     return CHIP_NO_ERROR;
 }
 
@@ -68,7 +69,7 @@ static CHIP_ERROR ConfigGetProductId(bool printHeader)
     {
         streamer_printf(sout, "ProductId:       ");
     }
-    streamer_printf(sout, "%" PRIu16 " (0x%" PRIX16 ")\r\n", value16, value16);
+    streamer_printf(sout, "%u (0x%X)\r\n", value16, value16);
     return CHIP_NO_ERROR;
 }
 
@@ -82,12 +83,12 @@ static CHIP_ERROR ConfigGetHardwareVersion(bool printHeader)
     streamer_t * sout = streamer_get();
     uint16_t value16;
 
-    ReturnErrorOnFailure(ConfigurationMgr().GetHardwareVersion(value16));
+    ReturnErrorOnFailure(DeviceLayer::GetDeviceInstanceInfoProvider()->GetHardwareVersion(value16));
     if (printHeader)
     {
         streamer_printf(sout, "HardwareVersion: ");
     }
-    streamer_printf(sout, "%" PRIu16 " (0x%" PRIX16 ")\r\n", value16, value16);
+    streamer_printf(sout, "%u (0x%X)\r\n", value16, value16);
     return CHIP_NO_ERROR;
 }
 

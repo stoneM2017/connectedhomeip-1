@@ -16,6 +16,9 @@
 
 #include "StatusResponseMessage.h"
 #include "MessageDefHelper.h"
+#include "protocols/interaction_model/Constants.h"
+
+using namespace chip::Protocols::InteractionModel;
 
 namespace chip {
 namespace app {
@@ -33,8 +36,12 @@ CHIP_ERROR StatusResponseMessage::Parser::CheckSchemaValidity() const
 
     while (CHIP_NO_ERROR == (err = reader.Next()))
     {
-        VerifyOrReturnError(TLV::IsContextTag(reader.GetTag()), CHIP_ERROR_INVALID_TLV_TAG);
-        switch (TLV::TagNumFromTag(reader.GetTag()))
+        if (!TLV::IsContextTag(reader.GetTag()))
+        {
+            continue;
+        }
+        uint32_t tagNum = TLV::TagNumFromTag(reader.GetTag());
+        switch (tagNum)
         {
         case to_underlying(Tag::kStatus):
             VerifyOrReturnError(!(tagPresenceMask & (1 << to_underlying(Tag::kStatus))), CHIP_ERROR_INVALID_TLV_TAG);
@@ -42,9 +49,9 @@ CHIP_ERROR StatusResponseMessage::Parser::CheckSchemaValidity() const
             VerifyOrReturnError(TLV::kTLVType_UnsignedInteger == reader.GetType(), CHIP_ERROR_WRONG_TLV_TYPE);
 #if CHIP_DETAIL_LOGGING
             {
-                uint16_t status;
+                uint8_t status;
                 ReturnErrorOnFailure(reader.Get(status));
-                PRETTY_PRINT("\tStatus = 0x%" PRIx16 ",", status);
+                PRETTY_PRINT("\tStatus = " ChipLogFormatIMStatus ",", ChipLogValueIMStatus(static_cast<Status>(status)));
             }
 #endif // CHIP_DETAIL_LOGGING
             break;
@@ -52,24 +59,18 @@ CHIP_ERROR StatusResponseMessage::Parser::CheckSchemaValidity() const
             ReturnErrorOnFailure(MessageParser::CheckInteractionModelRevision(reader));
             break;
         default:
-            ReturnErrorOnFailure(CHIP_ERROR_INVALID_TLV_TAG);
+            PRETTY_PRINT("Unknown tag num %" PRIu32, tagNum);
+            break;
         }
     }
     PRETTY_PRINT("}");
-    PRETTY_PRINT("");
+    PRETTY_PRINT_BLANK_LINE();
 
     if (CHIP_END_OF_TLV == err)
     {
         const int requiredFields = (1 << to_underlying(Tag::kStatus));
-
-        if ((tagPresenceMask & requiredFields) == requiredFields)
-        {
-            err = CHIP_NO_ERROR;
-        }
-        else
-        {
-            err = CHIP_ERROR_IM_MALFORMED_STATUS_RESPONSE_MESSAGE;
-        }
+        err =
+            (tagPresenceMask & requiredFields) == requiredFields ? CHIP_NO_ERROR : CHIP_ERROR_IM_MALFORMED_STATUS_RESPONSE_MESSAGE;
     }
     ReturnErrorOnFailure(err);
     return reader.ExitContainer(mOuterContainerType);

@@ -39,14 +39,6 @@
 #include <setup_payload/QRCodeSetupPayloadGenerator.h>
 #include <support/CHIPMem.h>
 
-#if CONFIG_ENABLE_OTA_REQUESTOR
-#include "app/clusters/ota-requestor/DefaultOTARequestorStorage.h"
-#include <app/clusters/ota-requestor/BDXDownloader.h>
-#include <app/clusters/ota-requestor/DefaultOTARequestor.h>
-#include <app/clusters/ota-requestor/DefaultOTARequestorDriver.h>
-#include <platform/Ameba/AmebaOTAImageProcessor.h>
-#endif
-
 #if CONFIG_ENABLE_PW_RPC
 #include "Rpc.h"
 #endif
@@ -98,53 +90,8 @@ Identify gIdentify1 = {
 
 static DeviceCallbacks EchoCallbacks;
 
-#if CONFIG_ENABLE_OTA_REQUESTOR
-DefaultOTARequestor gRequestorCore;
-DefaultOTARequestorStorage gRequestorStorage;
-DefaultOTARequestorDriver gRequestorUser;
-BDXDownloader gDownloader;
-AmebaOTAImageProcessor gImageProcessor;
-#endif
-
-#if CONFIG_ENABLE_OTA_REQUESTOR
-extern "C" void amebaQueryImageCmdHandler()
-{
-    ChipLogProgress(DeviceLayer, "Calling amebaQueryImageCmdHandler");
-    PlatformMgr().ScheduleWork([](intptr_t) { GetRequestorInstance()->TriggerImmediateQuery(); });
-}
-
-extern "C" void amebaApplyUpdateCmdHandler()
-{
-    ChipLogProgress(DeviceLayer, "Calling amebaApplyUpdateCmdHandler");
-    PlatformMgr().ScheduleWork([](intptr_t) { GetRequestorInstance()->ApplyUpdate(); });
-}
-
-static void InitOTARequestor(void)
-{
-    // Initialize and interconnect the Requestor and Image Processor objects -- START
-    SetRequestorInstance(&gRequestorCore);
-
-    gRequestorStorage.Init(chip::Server::GetInstance().GetPersistentStorage());
-
-    // Set server instance used for session establishment
-    gRequestorCore.Init(chip::Server::GetInstance(), gRequestorStorage, gRequestorUser, gDownloader);
-
-    gImageProcessor.SetOTADownloader(&gDownloader);
-
-    // Connect the Downloader and Image Processor objects
-    gDownloader.SetImageProcessorDelegate(&gImageProcessor);
-    gRequestorUser.Init(&gRequestorCore, &gImageProcessor);
-
-    // Initialize and interconnect the Requestor and Image Processor objects -- END
-}
-#endif // CONFIG_ENABLE_OTA_REQUESTOR
-
 static void InitServer(intptr_t context)
 {
-#if CONFIG_ENABLE_OTA_REQUESTOR
-    InitOTARequestor();
-#endif
-
     // Init ZCL Data Model and CHIP App Server
     static chip::CommonCaseDeviceServerInitParams initParams;
     initParams.InitializeStaticResourcesBeforeServerInit();

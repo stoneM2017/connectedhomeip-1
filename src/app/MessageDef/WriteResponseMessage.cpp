@@ -40,7 +40,10 @@ CHIP_ERROR WriteResponseMessage::Parser::CheckSchemaValidity() const
 
     while (CHIP_NO_ERROR == (err = reader.Next()))
     {
-        VerifyOrReturnError(TLV::IsContextTag(reader.GetTag()), err = CHIP_ERROR_INVALID_TLV_TAG);
+        if (!TLV::IsContextTag(reader.GetTag()))
+        {
+            continue;
+        }
         uint32_t tagNum = TLV::TagNumFromTag(reader.GetTag());
         switch (tagNum)
         {
@@ -64,20 +67,11 @@ CHIP_ERROR WriteResponseMessage::Parser::CheckSchemaValidity() const
     }
 
     PRETTY_PRINT("}");
-    PRETTY_PRINT("");
+    PRETTY_PRINT_BLANK_LINE();
 
     if (CHIP_END_OF_TLV == err)
     {
-        const int RequiredFields = (1 << to_underlying(Tag::kWriteResponses));
-
-        if ((tagPresenceMask & RequiredFields) == RequiredFields)
-        {
-            err = CHIP_NO_ERROR;
-        }
-        else
-        {
-            err = CHIP_ERROR_IM_MALFORMED_WRITE_RESPONSE_MESSAGE;
-        }
+        err = CHIP_NO_ERROR;
     }
 
     ReturnErrorOnFailure(err);

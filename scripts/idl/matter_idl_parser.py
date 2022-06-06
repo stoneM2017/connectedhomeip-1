@@ -15,6 +15,42 @@ except:
     from matter_idl_types import *
 
 
+class AddServerClusterToEndpointTransform:
+    """Provides an 'apply' method that can be run on endpoints
+       to add a server cluster to the given endpoint.
+    """
+
+    def __init__(self, cluster: ServerClusterInstantiation):
+        self.cluster = cluster
+
+    def apply(self, endpoint):
+        endpoint.server_clusters.append(self.cluster)
+
+
+class AddBindingToEndpointTransform:
+    """Provides an 'apply' method that can be run on endpoints
+       to add a cluster binding to the given endpoint.
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+    def apply(self, endpoint):
+        endpoint.client_bindings.append(self.name)
+
+
+class AddDeviceTypeToEndpointTransform:
+    """Provides an 'apply' method that can be run on endpoints
+       to add a device type to it
+    """
+
+    def __init__(self, device_type: DeviceType):
+        self.device_type = device_type
+
+    def apply(self, endpoint):
+        endpoint.device_types.append(self.device_type)
+
+
 class MatterIdlTransformer(Transformer):
     """
     A transformer capable to transform data parsed by Lark according to 
@@ -38,10 +74,12 @@ class MatterIdlTransformer(Transformer):
 
       Actual parametes to the methods depend on the rules multiplicity and/or
       optionality.
-
     """
 
-    def number(self, tokens):
+    def __init__(self, skip_meta):
+        self.skip_meta = skip_meta
+
+    def positive_integer(self, tokens):
         """Numbers in the grammar are integers or hex numbers.
         """
         if len(tokens) != 1:
@@ -52,6 +90,20 @@ class MatterIdlTransformer(Transformer):
             return int(n[2:], 16)
         else:
             return int(n)
+
+    @v_args(inline=True)
+    def negative_integer(self, value):
+        return -value
+
+    @v_args(inline=True)
+    def integer(self, value):
+        return value
+
+    def bool_default_true(self, _):
+        return True
+
+    def bool_default_false(self, _):
+        return False
 
     def id(self, tokens):
         """An id is a string containing an identifier
@@ -115,12 +167,6 @@ class MatterIdlTransformer(Transformer):
 
     def debug_priority(self, _):
         return EventPriority.DEBUG
-
-    def endpoint_server_cluster(self, _):
-        return EndpointContentType.SERVER_CLUSTER
-
-    def endpoint_binding_to_cluster(self, _):
-        return EndpointContentType.CLIENT_BINDING
 
     def timed_command(self, _):
         return CommandAttribute.TIMED_INVOKE
@@ -227,10 +273,25 @@ class MatterIdlTransformer(Transformer):
 
         return (args[-1], acl)
 
+    def ram_attribute(self, _):
+        return AttributeStorage.RAM
+
+    def persist_attribute(self, _):
+        return AttributeStorage.PERSIST
+
+    def callback_attribute(self, _):
+        return AttributeStorage.CALLBACK
+
+    @v_args(meta=True, inline=True)
+    def endpoint_attribute_instantiation(self, meta, storage, id, default=None):
+        meta = None if self.skip_meta else ParseMetaData(meta)
+        return AttributeInstantiation(parse_meta=meta, name=id, storage=storage, default=default)
+
+    def ESCAPED_STRING(self, s):
+        # handle escapes, skip the start and end quotes
+        return s.value[1:-1].encode('utf-8').decode('unicode-escape')
+
     def attribute(self, args):
-        # Input arguments are:
-        #   -  tags (0 or more)
-        #   -  attribute_with_access (i.e. pair of definition and acl arguments)
         tags = set(args[:-1])
         (definition, acl) = args[-1]
 
@@ -253,31 +314,36 @@ class MatterIdlTransformer(Transformer):
         return value
 
     @v_args(inline=True)
-    def response_struct(self, value):
-        value.tag = StructTag.RESPONSE
-        return value
+    def response_struct(self, id, code, *fields):
+        return Struct(name=id, tag=StructTag.RESPONSE, code=code, fields=list(fields))
 
     @v_args(inline=True)
-    def endpoint(self, number, *clusters):
+    def endpoint(self, number, *transforms):
         endpoint = Endpoint(number=number)
 
-        for t, name in clusters:
-            if t == EndpointContentType.CLIENT_BINDING:
-                endpoint.client_bindings.append(name)
-            elif t == EndpointContentType.SERVER_CLUSTER:
-                endpoint.server_clusters.append(name)
-            else:
-                raise Error("Unknown endpoint content: %r" % t)
+        for t in transforms:
+            t.apply(endpoint)
 
         return endpoint
 
     @v_args(inline=True)
-    def endpoint_cluster(self, t, id):
-        return (t, id)
+    def endpoint_device_type(self, name, code):
+        return AddDeviceTypeToEndpointTransform(DeviceType(name=name, code=code))
 
     @v_args(inline=True)
-    def cluster(self, side, name, code, *content):
-        result = Cluster(side=side, name=name, code=code)
+    def endpoint_cluster_binding(self, id):
+        return AddBindingToEndpointTransform(id)
+
+    @v_args(meta=True, inline=True)
+    def endpoint_server_cluster(self, meta, id, *attributes):
+        meta = None if self.skip_meta else ParseMetaData(meta)
+        return AddServerClusterToEndpointTransform(ServerClusterInstantiation(parse_meta=meta, name=id, attributes=list(attributes)))
+
+    @v_args(inline=True, meta=True)
+    def cluster(self, meta, side, name, code, *content):
+        meta = None if self.skip_meta else ParseMetaData(meta)
+
+        result = Cluster(parse_meta=meta, side=side, name=name, code=code)
 
         for item in content:
             if type(item) == Enum:
@@ -315,11 +381,22 @@ class MatterIdlTransformer(Transformer):
         return idl
 
 
-def CreateParser():
+class ParserWithLines:
+    def __init__(self, parser, skip_meta: bool):
+        self.parser = parser
+        self.skip_meta = skip_meta
+
+    def parse(self, file, file_name: str = None):
+        idl = MatterIdlTransformer(self.skip_meta).transform(self.parser.parse(file))
+        idl.parse_file_name = file_name
+        return idl
+
+
+def CreateParser(skip_meta: bool = False):
     """
     Generates a parser that will process a ".matter" file into a IDL
     """
-    return Lark.open('matter_grammar.lark', rel_to=__file__, start='idl', parser='lalr', transformer=MatterIdlTransformer())
+    return ParserWithLines(Lark.open('matter_grammar.lark', rel_to=__file__, start='idl', parser='lalr', propagate_positions=True), skip_meta)
 
 
 if __name__ == '__main__':
@@ -327,6 +404,7 @@ if __name__ == '__main__':
     # The ability to run is for debug and to print out the parsed AST.
     import click
     import coloredlogs
+    import pprint
 
     # Supported log levels, mapping string values required for argument
     # parsing into logging constants
@@ -349,10 +427,10 @@ if __name__ == '__main__':
                             log_level], fmt='%(asctime)s %(levelname)-7s %(message)s')
 
         logging.info("Starting to parse ...")
-        data = CreateParser().parse(open(filename).read())
+        data = CreateParser().parse(open(filename).read(), file_name=filename)
         logging.info("Parse completed")
 
         logging.info("Data:")
-        print(data)
+        pprint.pp(data)
 
     main()

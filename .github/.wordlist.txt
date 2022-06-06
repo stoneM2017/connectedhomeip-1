@@ -252,6 +252,7 @@ ColorControl
 Comcast
 Commandline
 Commissionable
+CommissionableDataProvider
 commissionables
 commissionee
 CommissioningFlow
@@ -352,6 +353,7 @@ demangle
 deployable
 depottools
 deps
+der
 desc
 descheduled
 detokenization
@@ -360,6 +362,7 @@ dev
 devcontainer
 devCtrl
 DevelopmentCerts
+DeviceAttestationCredentialsProvider
 DeviceAttestationCredsExample
 DeviceCaCerts
 DeviceCert
@@ -425,7 +428,9 @@ dropdown
 dryrun
 DS
 duplicative
+DUT
 DV
+DVK
 dynload
 eabi
 EB
@@ -528,6 +533,7 @@ fsync
 ftd
 fullclean
 fuzzer
+FW
 gbl
 gcloud
 GDB
@@ -582,6 +588,7 @@ hardknott
 hardwarever
 HardwareVersion
 HardwareVersionString
+hasValue
 hci
 hciattach
 hciconfig
@@ -766,6 +773,7 @@ ManufacturingDate
 masterkey
 matterBuildSrcDir
 matterc
+MatterCustomTrace
 matterd
 MatterLock
 matterSdkSourceBuild
@@ -845,6 +853,7 @@ mydir
 MyPASSWORD
 MySSID
 NAMESERVER
+NAMESPACE
 namespacing
 nano
 natively
@@ -872,6 +881,7 @@ nongnu
 nordicsemi
 NotAvailable
 notValue
+npm
 nRF
 nrfconnect
 nrfdks
@@ -882,6 +892,7 @@ nullable
 nullptr
 NUM
 NVM
+NVS
 nwk
 NXP
 objcopy
@@ -979,6 +990,7 @@ PlatformManagerImpl
 plt
 png
 PollControl
+pollInterval
 polymorphism
 POSIX
 PosixConfig
@@ -1094,6 +1106,7 @@ RPi
 RPis
 rsn
 RSSI
+RST
 rsync
 RTL
 rtld
@@ -1265,6 +1278,7 @@ timedInteractionTimeoutMs
 TimeFormatLocalization
 timeoutMs
 TimeSynchronization
+Tizen
 TKIP
 tlsr
 TLV
@@ -1281,6 +1295,7 @@ tos
 TotalColiformBacteriaConcentrationMeasurement
 totalTests
 TotalTrihalomethanesConcentrationMeasurement
+TPK
 trackAlloc
 trackFree
 TransferSession
@@ -1297,6 +1312,7 @@ ttyACMx
 ttymxc
 ttyUSB
 TurbidityConcentrationMeasurement
+TvCasting
 TXD
 txt
 uargument
@@ -1342,6 +1358,7 @@ UTF
 util
 utils
 UUID
+ux
 VCP
 Vectorcall
 VendorID
@@ -1417,6 +1434,7 @@ xFF
 xFFF
 xFFFF
 xfffff
+xFFFFFFEFFFFFFFFF
 xtensa
 xwayland
 xyz

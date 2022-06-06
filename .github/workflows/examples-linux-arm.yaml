@@ -31,12 +31,12 @@ jobs:
         if: github.actor != 'restyled-io[bot]'
 
         container:
-            image: connectedhomeip/chip-build-crosscompile:0.5.58
+            image: connectedhomeip/chip-build-crosscompile:0.5.77
             volumes:
                 - "/tmp/bloat_reports:/tmp/bloat_reports"
 
         steps:
-            - uses: Wandalen/wretry.action@v1.0.11
+            - uses: Wandalen/wretry.action@v1.0.15
               name: Checkout
               with:
                   action: actions/checkout@v3
@@ -71,7 +71,7 @@ jobs:
                      "./scripts/build/build_examples.py \
                         --target linux-arm64-all-clusters \
                         --target linux-arm64-chip-tool-no-interactive-ipv6only \
-                        --target linux-arm64-door-lock \
+                        --target linux-arm64-lock \
                         --target linux-arm64-minmdns \
                         --target linux-arm64-thermostat-no-ble \
                         build \
