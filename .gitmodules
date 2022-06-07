@@ -248,5 +248,5 @@
 	platforms = bl602
 [submodule "third_party/bouffalolab/bl_iot_sdk/repo"]
 	path = third_party/bouffalolab/bl_iot_sdk/repo
-	url = git@github.com:bouffalolab/bl_iot_sdk.git
-    platforms = bl702
+	url = https://github.com/bouffalolab/bl_iot_sdk.git
+	branch = bl702_matter
