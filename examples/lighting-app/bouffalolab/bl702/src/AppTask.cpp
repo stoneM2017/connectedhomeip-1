@@ -328,15 +328,12 @@ void AppTask::LightingUpdate(app_event_t event)
     do
     {
         if (EMBER_ZCL_STATUS_SUCCESS != emberAfReadAttribute(endpoint,
-            ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, 
-            CLUSTER_MASK_SERVER, &onoff, APP_LIGHT_ENDPOINT_ID, &dataType)) {
+            ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, &onoff, sizeof(onoff))) {
             break;
         }
 
         if (EMBER_ZCL_STATUS_SUCCESS != emberAfReadAttribute(endpoint,
-            ZCL_LEVEL_CONTROL_CLUSTER_ID, 
-            ZCL_CURRENT_LEVEL_ATTRIBUTE_ID, 
-            CLUSTER_MASK_SERVER, &v, APP_LIGHT_ENDPOINT_ID, &dataType)) {
+            ZCL_LEVEL_CONTROL_CLUSTER_ID, ZCL_CURRENT_LEVEL_ATTRIBUTE_ID, &v, sizeof(v))) {
             break;
         }
 
@@ -356,10 +353,10 @@ void AppTask::LightingSetOnoff(uint8_t bonoff)
     EndpointId endpoint = GetAppTask().GetEndpointId();
 
     // write the new on/off value
-    emberAfWriteAttribute(endpoint, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, CLUSTER_MASK_SERVER,
+    emberAfWriteAttribute(endpoint, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID,
                                                  (uint8_t *) &newValue, ZCL_BOOLEAN_ATTRIBUTE_TYPE);
     newValue = 254;
-    emberAfWriteAttribute(endpoint, ZCL_LEVEL_CONTROL_CLUSTER_ID, ZCL_CURRENT_LEVEL_ATTRIBUTE_ID, CLUSTER_MASK_SERVER,
+    emberAfWriteAttribute(endpoint, ZCL_LEVEL_CONTROL_CLUSTER_ID, ZCL_CURRENT_LEVEL_ATTRIBUTE_ID,
                                                  (uint8_t *) &newValue, ZCL_INT8U_ATTRIBUTE_TYPE);
 }
 
