@@ -42,6 +42,25 @@ namespace chip {
 namespace Dnssd {
 
 #define MDNS_MAX_PACKET_SIZE 64
+typedef struct
+{
+    const char * key;   /*!< item key name */
+    const char * value; /*!< item value string */
+    size_t value_len;
+} mdns_txt_item_t;
+
+typedef struct mdns
+{
+    struct netif * netif;
+    uint8_t slot[10];
+    uint8_t slot_idx;
+    int txt_cnt;
+} mdns_t;
+
+#define MDNS_TXT_MAX_LEN 128
+static mdns_t mdns      = { NULL, 0, 0, 0, 0};
+mdns_txt_item_t * items = nullptr;
+uint8_t packet[MDNS_TXT_MAX_LEN];
 
 static const DnssdService * glservice;
 
@@ -50,6 +69,7 @@ CHIP_ERROR ChipDnssdInit(DnssdAsyncReturnCallback initCallback, DnssdAsyncReturn
     CHIP_ERROR error = CHIP_NO_ERROR;
 
     mdns_resp_init();
+    mdns.slot_idx = 0;
     initCallback(context, error);
 
     glservice = static_cast<DnssdService *>(chip::Platform::MemoryCalloc(1, sizeof(DnssdService)));
@@ -66,25 +86,6 @@ static const char * GetProtocolString(DnssdServiceProtocol protocol)
 {
     return protocol == DnssdServiceProtocol::kDnssdProtocolTcp ? "_tcp" : "_udp";
 }
-
-typedef struct
-{
-    const char * key;   /*!< item key name */
-    const char * value; /*!< item value string */
-    size_t value_len;
-} mdns_txt_item_t;
-
-typedef struct mdns
-{
-    struct netif * netif;
-    int slot;
-    int txt_cnt;
-} mdns_t;
-
-#define MDNS_TXT_MAX_LEN 128
-static mdns_t mdns      = { NULL, -1 };
-mdns_txt_item_t * items = nullptr;
-uint8_t packet[MDNS_TXT_MAX_LEN];
 
 static inline uint8_t _mdns_append_u8(uint8_t * packet, uint16_t * index, uint8_t value)
 {
@@ -221,7 +222,9 @@ int mdns_responder_ops(struct netif * netif)
         return -1;
     }
 
-    mdns.slot = slot;
+    mdns.slot[mdns.slot_idx] = slot;
+    mdns.slot_idx++;
+    log_info("=============================================== add slot;%d \r\n", slot);
 
 #if 0
     // for ota
@@ -288,7 +291,7 @@ CHIP_ERROR ChipDnssdPublishService(const DnssdService * service, DnssdPublishCal
 CHIP_ERROR ChipDnssdRemoveServices()
 {
     struct netif * netif;
-    int slot;
+    int i = 0;
 
     log_info("================ ChipDnssdRemoveServices.\r\n");
 
@@ -300,7 +303,12 @@ CHIP_ERROR ChipDnssdRemoveServices()
         return CHIP_ERROR_INTERNAL;
     }
 
-    mdns_resp_del_service(netif, mdns.slot);
+    for (i = 0; i < mdns.slot_idx; i++) {
+        mdns_resp_del_service(netif, mdns.slot[i]);
+        log_info("=============================================== delete slot;%d \r\n", i);
+    }
+
+    mdns.slot_idx = 0;
 #endif
 
     return CHIP_NO_ERROR;
