@@ -78,6 +78,7 @@ typedef struct mdns
 {
     struct netif * netif;
     int slot;
+    int txt_cnt;
 } mdns_t;
 
 #define MDNS_TXT_MAX_LEN 128
@@ -139,7 +140,7 @@ static void srv_txt(struct mdns_service * service, void * txt_userdata)
     int i, ret;
     int index = 0;
 
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < mdns.txt_cnt; i++)
     {
         ret = mdns_resp_add_service_txtitem(service, &(packet[index + 1]), packet[index]);
         if (ret)
@@ -179,18 +180,20 @@ int mdns_responder_ops(struct netif * netif)
         return -1;
     }
 
-    mdns.netif = netif;
+    if (!(mdns.netif)) {
+        mdns.netif = netif;
 
-    ret = mdns_resp_add_netif(netif, glservice->mHostName, 10);
-    if (ret != 0)
-    {
-        mdns_resp_deinit();
-        log_info("add netif failed:%d\r\n", ret);
-        return -1;
+        ret = mdns_resp_add_netif(netif, glservice->mHostName, 10);
+        if (ret != 0)
+        {
+            mdns_resp_deinit();
+            log_info("add netif failed:%d\r\n", ret);
+            return -1;
+        }
     }
 
     items = static_cast<mdns_txt_item_t *>(chip::Platform::MemoryCalloc(glservice->mTextEntrySize, sizeof(mdns_txt_item_t)));
-
+    mdns.txt_cnt = glservice->mTextEntrySize;
     for (size_t i = 0; i < glservice->mTextEntrySize; i++)
     {
         items[i].key       = glservice->mTextEntries[i].mKey;
@@ -199,8 +202,6 @@ int mdns_responder_ops(struct netif * netif)
         packet_len         = packet_len + strlen(items[i].key) + items[i].value_len + 1;
     }
 
-    // todo:use malloc?
-    // packet = static_cast<uint8_t*>(chip::Platform::MemoryCalloc(packet_len, sizeof(uint8_t)));
     if (MDNS_TXT_MAX_LEN < packet_len)
     {
         return -1;
@@ -220,6 +221,9 @@ int mdns_responder_ops(struct netif * netif)
         return -1;
     }
 
+    mdns.slot = slot;
+
+#if 0
     // for ota
     slot =
         mdns_resp_add_service(netif, "MATTER OTA", "_ota", static_cast<uint8_t>(glservice->mProtocol), 3333, 1000, ota_txt, NULL);
@@ -229,14 +233,17 @@ int mdns_responder_ops(struct netif * netif)
         mdns_resp_deinit();
         log_info("ota mdns fail.\r\n");
     }
+#endif
 
     return slot;
 }
 
+#if 1
 static err_t mdns_responder_start_netifapi_errt_fn(struct netif * netif)
 {
     return mdns_responder_ops(netif);
 }
+#endif
 
 CHIP_ERROR ChipDnssdPublishService(const DnssdService * service, DnssdPublishCallback callback, void * context)
 {
@@ -244,6 +251,8 @@ CHIP_ERROR ChipDnssdPublishService(const DnssdService * service, DnssdPublishCal
     struct netif * netif;
     int slot;
     bool mdns_flag;
+
+    log_info("============================== ChipDnssdPublishService.\r\n");
 
     if (!(chip::DeviceLayer::ConnectivityMgrImpl()._IsWiFiStationConnected()))
     {
@@ -262,36 +271,58 @@ CHIP_ERROR ChipDnssdPublishService(const DnssdService * service, DnssdPublishCal
         return CHIP_ERROR_INTERNAL;
     }
 
+    //mdns_responder_ops(netif);
+
+#if 1
     slot = netifapi_netif_common(netif, NULL, mdns_responder_start_netifapi_errt_fn);
     if (slot < 0)
     {
         log_info("start mdns failed\r\n");
         return CHIP_ERROR_INTERNAL;
     }
+#endif
 
     return CHIP_NO_ERROR;
 }
 
 CHIP_ERROR ChipDnssdRemoveServices()
 {
-    // netifapi_netif_common(mdns.netif, NULL, mdns_responder_stop_netifapi_errt_fn);
+    struct netif * netif;
+    int slot;
+
+    log_info("================ ChipDnssdRemoveServices.\r\n");
+
+#if 1
+    netif = wifi_mgmr_sta_netif_get();
+    if (netif == NULL)
+    {
+        log_info("find failed\r\n");
+        return CHIP_ERROR_INTERNAL;
+    }
+
+    mdns_resp_del_service(netif, mdns.slot);
+#endif
+
     return CHIP_NO_ERROR;
 }
 
 CHIP_ERROR ChipDnssdFinalizeServiceUpdate()
 {
+    log_info("================= ChipDnssdFinalizeServiceUpdate.\r\n");
     return CHIP_NO_ERROR;
 }
 
 CHIP_ERROR ChipDnssdBrowse(const char * /*type*/, DnssdServiceProtocol /*protocol*/, chip::Inet::IPAddressType addressType,
                            chip::Inet::InterfaceId /*interface*/, DnssdBrowseCallback /*callback*/, void * /*context*/)
 {
+    log_info("=========================== ChipDnssdBrowse.\r\n");
     return CHIP_ERROR_NOT_IMPLEMENTED;
 }
 
 CHIP_ERROR ChipDnssdResolve(DnssdService * /*service*/, chip::Inet::InterfaceId /*interface*/, DnssdResolveCallback /*callback*/,
                             void * /*context*/)
 {
+    log_info("=========================== ChipDnssdResolve.\r\n");
     return CHIP_ERROR_NOT_IMPLEMENTED;
 }
 
