@@ -224,7 +224,7 @@ int mdns_responder_ops(struct netif * netif)
 
     mdns.slot[mdns.slot_idx] = slot;
     mdns.slot_idx++;
-    log_info("=============================================== add slot;%d \r\n", slot);
+    mdns_resp_announce(netif);
 
 #if 0
     // for ota
@@ -276,14 +276,12 @@ CHIP_ERROR ChipDnssdPublishService(const DnssdService * service, DnssdPublishCal
 
     //mdns_responder_ops(netif);
 
-#if 1
     slot = netifapi_netif_common(netif, NULL, mdns_responder_start_netifapi_errt_fn);
     if (slot < 0)
     {
         log_info("start mdns failed\r\n");
         return CHIP_ERROR_INTERNAL;
     }
-#endif
 
     return CHIP_NO_ERROR;
 }
@@ -293,9 +291,6 @@ CHIP_ERROR ChipDnssdRemoveServices()
     struct netif * netif;
     int i = 0;
 
-    log_info("================ ChipDnssdRemoveServices.\r\n");
-
-#if 1
     netif = wifi_mgmr_sta_netif_get();
     if (netif == NULL)
     {
@@ -305,32 +300,27 @@ CHIP_ERROR ChipDnssdRemoveServices()
 
     for (i = 0; i < mdns.slot_idx; i++) {
         mdns_resp_del_service(netif, mdns.slot[i]);
-        log_info("=============================================== delete slot;%d \r\n", i);
     }
 
     mdns.slot_idx = 0;
-#endif
 
     return CHIP_NO_ERROR;
 }
 
 CHIP_ERROR ChipDnssdFinalizeServiceUpdate()
 {
-    log_info("================= ChipDnssdFinalizeServiceUpdate.\r\n");
     return CHIP_NO_ERROR;
 }
 
 CHIP_ERROR ChipDnssdBrowse(const char * /*type*/, DnssdServiceProtocol /*protocol*/, chip::Inet::IPAddressType addressType,
                            chip::Inet::InterfaceId /*interface*/, DnssdBrowseCallback /*callback*/, void * /*context*/)
 {
-    log_info("=========================== ChipDnssdBrowse.\r\n");
     return CHIP_ERROR_NOT_IMPLEMENTED;
 }
 
 CHIP_ERROR ChipDnssdResolve(DnssdService * /*service*/, chip::Inet::InterfaceId /*interface*/, DnssdResolveCallback /*callback*/,
                             void * /*context*/)
 {
-    log_info("=========================== ChipDnssdResolve.\r\n");
     return CHIP_ERROR_NOT_IMPLEMENTED;
 }
 
