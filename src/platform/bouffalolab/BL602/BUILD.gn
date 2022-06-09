@@ -40,7 +40,6 @@ static_library("BL602") {
     "DeviceNetworkProvisioningDelegateImpl.h",
     "DiagnosticDataProviderImpl.cpp",
     "DiagnosticDataProviderImpl.h",
-    "DnssdImpl.cpp",
     "InetPlatformConfig.h",
     "Logging.cpp",
     "NetworkCommissioningDriver.cpp",
@@ -49,7 +48,10 @@ static_library("BL602") {
     "SystemPlatformConfig.h",
   ]
 
-  deps = [ "${chip_root}/src/lib/dnssd:platform_header" ]
+  deps = [
+    "${chip_root}/src/lib/dnssd:platform_header",
+    "${chip_root}/src/setup_payload",
+  ]
 
   public_deps = [ "${chip_root}/src/platform:platform_base" ]
 
