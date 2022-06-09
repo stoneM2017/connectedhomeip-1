@@ -60,7 +60,13 @@ typedef struct mdns
 #define MDNS_TXT_MAX_LEN 128
 static mdns_t mdns      = { NULL, 0, 0, 0, 0};
 mdns_txt_item_t * items = nullptr;
-uint8_t packet[MDNS_TXT_MAX_LEN];
+
+typedef struct _mdns_txt_t {
+    struct _mdns_txt_t * next;
+    uint8_t packet[MDNS_TXT_MAX_LEN];
+    int pktlen;
+} mdns_txt_t;
+mdns_txt_t *pMdnsTxtHead = nullptr;
 
 static const DnssdService * glservice;
 
@@ -126,32 +132,52 @@ static inline int append_one_txt_record_entry(uint8_t * packet, uint16_t * index
     return len + 1;
 }
 
-static void dnssd_txt_resolve(uint8_t * packet, mdns_txt_item_t * txt, int count)
+static void * dnssd_txt_resolve(uint8_t * pname, mdns_txt_item_t * txt, int count)
 {
     uint16_t index = 0;
+    mdns_txt_t * p = pMdnsTxtHead;
 
-    for (int i = 0; i < count; i++)
-    {
-        append_one_txt_record_entry(packet, &index, &(txt[i]));
+    p = static_cast<mdns_txt_t *>(chip::Platform::MemoryAlloc(sizeof(mdns_txt_t)));
+
+    if (p) {
+        p->next = nullptr;
+        p->pktlen = 0;
+        if (NULL == pMdnsTxtHead) {
+            pMdnsTxtHead = p;
+        }
+        else {
+            pMdnsTxtHead->next = p;
+        }
+        for (int i = 0; i < count; i++)
+        {
+            append_one_txt_record_entry(p->packet, &index, &(txt[i]));
+        }
+        p->pktlen = count;
     }
+
+    return p;
 }
 
 static void srv_txt(struct mdns_service * service, void * txt_userdata)
 {
     int i, ret;
     int index = 0;
+    mdns_txt_t * p = (mdns_txt_t *)txt_userdata;
 
-    for (i = 0; i < mdns.txt_cnt; i++)
-    {
-        ret = mdns_resp_add_service_txtitem(service, &(packet[index + 1]), packet[index]);
-        if (ret)
+    if  (p) {
+
+        for (i = 0; i < p->pktlen; i++)
         {
-            log_info("send txt failed.\r\n");
+            ret = mdns_resp_add_service_txtitem(service, &(p->packet[index + 1]), p->packet[index]);
+            if (ret)
+            {
+                log_info("send txt failed.\r\n");
 
-            return;
+                return;
+            }
+
+            index = index + p->packet[index] + 1;
         }
-
-        index = index + packet[index] + 1;
     }
 }
 
@@ -174,6 +200,7 @@ int mdns_responder_ops(struct netif * netif)
     int ret, slot = -1;
     int protocol        = 0;
     uint16_t packet_len = 0;
+    void * p = nullptr;
 
     if (netif == NULL)
     {
@@ -208,12 +235,15 @@ int mdns_responder_ops(struct netif * netif)
         return -1;
     }
 
-    dnssd_txt_resolve(packet, items, glservice->mTextEntrySize);
+    if (NULL == (p = dnssd_txt_resolve(NULL, items, glservice->mTextEntrySize))) {
+        chip::Platform::MemoryFree(items);
+        return -1;
+    }
     chip::Platform::MemoryFree(items);
 
     log_info("name = %s nType = %s protocol = %d port = %d \r\n", glservice->mName, glservice->mType, protocol, glservice->mPort);
     slot = mdns_resp_add_service(netif, glservice->mName, glservice->mType, static_cast<uint8_t>(glservice->mProtocol),
-                                 glservice->mPort, 60, srv_txt, NULL);
+                                 glservice->mPort, 60, srv_txt, p);
     if (slot < 0)
     {
         mdns_resp_remove_netif(netif);
@@ -265,6 +295,7 @@ CHIP_ERROR ChipDnssdPublishService(const DnssdService * service, DnssdPublishCal
     if (service)
     {
         memcpy(glservice, service, sizeof(DnssdService));
+        log_info("ChipDnssdPublishService: name = %s nType = %s port = %d \r\n", glservice->mName, glservice->mType, glservice->mPort);
     }
 
     netif = wifi_mgmr_sta_netif_get();
@@ -290,6 +321,8 @@ CHIP_ERROR ChipDnssdRemoveServices()
 {
     struct netif * netif;
     int i = 0;
+    mdns_txt_t *p = pMdnsTxtHead, *ptmp;
+    pMdnsTxtHead = nullptr;
 
     netif = wifi_mgmr_sta_netif_get();
     if (netif == NULL)
@@ -303,6 +336,12 @@ CHIP_ERROR ChipDnssdRemoveServices()
     }
 
     mdns.slot_idx = 0;
+
+    while (p) {
+        ptmp = p;
+        p = p->next;
+        chip::Platform::MemoryFree(ptmp);
+    }
 
     return CHIP_NO_ERROR;
 }
