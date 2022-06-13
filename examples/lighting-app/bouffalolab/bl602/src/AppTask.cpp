@@ -121,8 +121,6 @@ CHIP_ERROR AppTask::Init()
 
     LightMgr().SetCallbacks(ActionInitiated, ActionCompleted);
 
-    UpdateClusterState();
-
     ConfigurationMgr().LogDeviceConfig();
 
     PrintOnboardingCodes(chip::RendezvousInformationFlag(chip::RendezvousInformationFlag::kBLE));
@@ -525,6 +523,7 @@ void AppTask::UpdateClusterState(void)
     {
         log_error("ERR: updating on/off %x\r\n", status);
     }
+
 }
 
 void AppTask::OtaTask(void)
