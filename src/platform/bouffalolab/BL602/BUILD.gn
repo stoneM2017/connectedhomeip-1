@@ -40,6 +40,8 @@ static_library("BL602") {
     "DeviceNetworkProvisioningDelegateImpl.h",
     "DiagnosticDataProviderImpl.cpp",
     "DiagnosticDataProviderImpl.h",
+    "DeviceInfoProviderImpl.cpp",
+    "DeviceInfoProviderImpl.h",
     "InetPlatformConfig.h",
     "Logging.cpp",
     "NetworkCommissioningDriver.cpp",
