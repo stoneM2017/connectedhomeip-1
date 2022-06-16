@@ -110,9 +110,6 @@
 #endif // CHIP_CONFIG_MAX_LOCAL_ADDR_UDP_ENDPOINTS
 
 
-#ifndef CHIP_CONFIG_MAX_FABRICS
-#define CHIP_CONFIG_MAX_FABRICS 4
-#endif                            // CHIP_CONFIG_MAX_FABRICS
 
 // ==================== Security Configuration Overrides ====================
 

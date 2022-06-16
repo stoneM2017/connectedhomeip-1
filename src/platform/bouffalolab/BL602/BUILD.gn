@@ -46,6 +46,7 @@ static_library("BL602") {
     "PlatformManagerImpl.cpp",
     "PlatformManagerImpl.h",
     "SystemPlatformConfig.h",
+    "OTAImageProcessorImpl.cpp",
   ]
 
   deps = [
