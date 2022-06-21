@@ -16,6 +16,10 @@ extern "C" {
 #include <blog.h>
 }
 
+#ifdef PW_RPC_ENABLED
+#include "PigweedLogger.h"
+#endif
+
 namespace chip {
 namespace Logging {
 namespace Platform {
@@ -38,6 +42,12 @@ void LogV(const char * module, uint8_t category, const char * msg, va_list v)
         log_trace("[%s] %s\r\n", module, formattedMsg);
         break;
     }
+
+#ifdef PW_RPC_ENABLED
+    PigweedLogger::putString(formattedMsg, strlen(formattedMsg));
+    const char * newline = "\r\n";
+    PigweedLogger::putString(newline, strlen(newline));
+#endif
 }
 
 } // namespace Platform

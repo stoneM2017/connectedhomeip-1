@@ -15,32 +15,16 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-#include "uart.h"
-#include "hosal_uart.h"
 
-HOSAL_UART_DEV_DECL(uart_dev, 0, 16, 7, 2000000);
+#pragma once
 
-void uartConsoleInit(void)
-{
-    hosal_uart_init(&uart_dev);
-}
+namespace chip {
+namespace rpc {
 
-int16_t uartConsoleWrite(const char * Buf, uint16_t BufLength)
-{
-    if (Buf == NULL || BufLength < 1)
-    {
-        return -1;
-    }
+class LightingService;
 
-    return hosal_uart_send(&uart_dev, Buf, BufLength);
-}
+void Init();
+void RunRpcService(void *);
 
-int16_t uartConsoleRead(char * Buf, uint16_t NbBytesToRead)
-{
-    if (Buf == NULL || NbBytesToRead < 1)
-    {
-        return -1;
-    }
-
-    return (int16_t) hosal_uart_receive(&uart_dev, Buf, NbBytesToRead);
-}
+} // namespace rpc
+} // namespace chip

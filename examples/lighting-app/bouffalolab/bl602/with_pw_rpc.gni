@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# add this gni as import in your build args to use pigweed in the example
+# 'import("//with_pw_rpc.gni")'
+
 import("//build_overrides/chip.gni")
+import("${chip_root}/config/bouffalolab/bl602/lib/pw_rpc/pw_rpc.gni")
+import("${chip_root}/examples/platform/bouffalolab/bl602/args.gni")
 import("//build_overrides/pigweed.gni")
 
-pw_log_BACKEND = "$dir_pw_log_basic"
-pw_assert_BACKEND = "$dir_pw_assert_log"
-pw_sys_io_BACKEND =
-    "${chip_root}/examples/platform/bouffalolab/bl602/pw_sys_io:pw_sys_io_bl602"
+chip_enable_pw_rpc = true
+chip_enable_openthread = false
+chip_build_pw_trace_lib = false
 
-pw_build_LINK_DEPS = [
-  "$dir_pw_assert:impl",
-  "$dir_pw_log:impl",
-]
+cpp_standard = "gnu++17"
 
-dir_pw_third_party_nanopb = "${chip_root}/third_party/nanopb/repo"
+pw_trace_BACKEND = "$dir_pw_trace_tokenized"
