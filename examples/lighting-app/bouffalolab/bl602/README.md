@@ -46,7 +46,7 @@ connectedhomeip$ source ./scripts/activate.sh
 
     `./scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602-light 'import("//with_pw_rpc.gni")'`
 
-    Generated files
+-   Generated files
 
     `connectedhomeip/out/bl602-light/chip-bl602-lighting-example.bin`
 
