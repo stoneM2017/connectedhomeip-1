@@ -157,6 +157,7 @@ template("bl602_sdk") {
       "SYS_VFS_ENABLE=1",
       "SYS_VFS_UART_ENABLE=1",
       "SYS_AOS_LOOP_ENABLE=1",
+      "BL602_USE_HAL_DRIVER=1",
       "BL602=BL602",
       "SYS_LOOPRT_ENABLE=1",
       "CFG_TXDESC=2",

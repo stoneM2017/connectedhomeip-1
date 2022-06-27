@@ -72,7 +72,7 @@ int putString(const char * buffer, size_t size)
     for (size_t i = 0; i < size; ++i)
     {
         // Send each line excluding "\r\n" in a separate frame
-
+        
         if (buffer[i] == '\r')
             continue;
 

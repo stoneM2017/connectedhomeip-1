@@ -42,6 +42,10 @@ connectedhomeip$ source ./scripts/activate.sh
 
     `connectedhomeip$ ./scripts/build/build_examples.py --target bl602-light build`
 
+-   Build the example with Pigweed RPC:
+
+    `./scripts/examples/gn_bl602_example.sh examples/lighting-app/bouffalolab/bl602/ ./out/bl602-light 'import("//with_pw_rpc.gni")'`
+
     Generated files
 
     `connectedhomeip/out/bl602-light/chip-bl602-lighting-example.bin`
@@ -155,3 +159,19 @@ $ sudo ./chip-tool pairing ble-wifi 1 ${SSID} ${PASSWORD} 20202021 3840
 -   Use ColorControl cluster command to control the color attributes:
 
     `$ sudo ./chip-tool colorcontrol move-to-hue-and-saturation 240 100 0 0 0 1 1`
+
+### Running RPC Console
+
+-   Build "chip-console" following this [guide](../../../common/pigweed/rpc_console/README.md)
+
+-   Start the console
+
+    `$ chip-console --device /dev/ttyUSB0 -b 2000000`
+
+-   Simulate a button press or release to toggle the LED in dev board
+
+    `rpcs.chip.rpc.Button.Event(idx=1, pushed=True)`
+
+-   Reboot the device
+
+    `rpcs.chip.rpc.Device.Reboot()`

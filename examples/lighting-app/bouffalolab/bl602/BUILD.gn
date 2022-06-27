@@ -129,7 +129,7 @@ bl602_executable("lighting_app") {
 
     sources += [
       "${chip_root}/examples/common/pigweed/RpcService.cpp",
-      "${chip_root}/examples/common/pigweed/bl602/PigweedLoggerMutex.cpp",
+      "${chip_root}/examples/common/pigweed/bouffalolab/bl602/PigweedLoggerMutex.cpp",
       "${examples_plat_dir}/PigweedLogger.cpp",
       "${examples_plat_dir}/Rpc.cpp",
     ]
@@ -155,7 +155,7 @@ bl602_executable("lighting_app") {
 
     include_dirs += [
       "${chip_root}/examples/common",
-      "${chip_root}/examples/common/pigweed/bl602",
+      "${chip_root}/examples/common/pigweed/bouffalolab/bl602",
     ]
   }
 
