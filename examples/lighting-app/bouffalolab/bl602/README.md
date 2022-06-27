@@ -168,9 +168,9 @@ $ sudo ./chip-tool pairing ble-wifi 1 ${SSID} ${PASSWORD} 20202021 3840
 
     `$ chip-console --device /dev/ttyUSB0 -b 2000000`
 
--   Simulate a button press or release to toggle the LED in dev board
+-   Simulate a button press or release to toggle the LED on dev board
 
-    `rpcs.chip.rpc.Button.Event(idx=1, pushed=True)`
+    `rpcs.chip.rpc.Button.Event(idx=8, pushed=True)`
 
 -   Reboot the device
 
