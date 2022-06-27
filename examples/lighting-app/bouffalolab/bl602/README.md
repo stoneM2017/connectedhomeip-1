@@ -44,7 +44,7 @@ connectedhomeip$ source ./scripts/activate.sh
 
 -   Build the example with Pigweed RPC:
 
-    `./scripts/examples/gn_bl602_example.sh examples/lighting-app/bouffalolab/bl602/ ./out/bl602-light 'import("//with_pw_rpc.gni")'`
+    `./scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602-light 'import("//with_pw_rpc.gni")'`
 
     Generated files
 
@@ -162,7 +162,7 @@ $ sudo ./chip-tool pairing ble-wifi 1 ${SSID} ${PASSWORD} 20202021 3840
 
 ### Running RPC Console
 
--   Build "chip-console" following this [guide](../../../common/pigweed/rpc_console/README.md)
+-   Build chip-console following this [guide](../../../common/pigweed/rpc_console/README.md)
 
 -   Start the console
 

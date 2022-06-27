@@ -33,7 +33,7 @@ if [ $# -lt 2 ]; then
     exit 1	
 fi
 
-EXAMPLE_DIR=$1
+EXAMPLE_DIR=examples/$1/bouffalolab/bl602/
 shift
 OUTPUT_DIR=$1
 shift
