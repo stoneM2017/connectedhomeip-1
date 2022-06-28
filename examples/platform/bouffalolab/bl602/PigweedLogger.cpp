@@ -29,7 +29,6 @@
 #include "semphr.h"
 #include <pw_hdlc/encoder.h>
 #include <pw_stream/sys_io_stream.h>
-#include <pw_sys_io_efr32/init.h>
 
 #include <cassert>
 #include <cstdint>
@@ -62,8 +61,6 @@ void init(void)
 {
     sLoggerLock = xSemaphoreCreateMutex();
     assert(sLoggerLock != NULL);
-
-    pw_sys_io_Init();
 }
 
 int putString(const char * buffer, size_t size)
@@ -75,7 +72,7 @@ int putString(const char * buffer, size_t size)
     for (size_t i = 0; i < size; ++i)
     {
         // Send each line excluding "\r\n" in a separate frame
-
+        
         if (buffer[i] == '\r')
             continue;
 
