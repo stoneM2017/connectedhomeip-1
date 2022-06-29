@@ -27,74 +27,11 @@
 #include "AppTask.h"
 #include <platform/CHIPDeviceLayer.h>
 
-#include <hosal_pwm.h>
-
-#define IOT_DVK_3S 0
-
-#if BOARD_ID == IOT_DVK_3S
-hosal_pwm_dev_t pwmR = { .port = 0xff };
-#endif
+#include <InitPlatform.h>
 
 static void showRGB(uint8_t red, uint8_t green, uint8_t blue)
 {
-
-#if BOARD_ID == IOT_DVK_3S
-
-    uint32_t level = (red * 10000) / UINT8_MAX;
-    log_info("red level: %d\r\n", level);
-
-    if (pwmR.port == 0xff)
-    {
-        pwmR.port              = 0;
-        pwmR.config.pin        = 0;
-        pwmR.config.duty_cycle = level; // duty_cycle range is 0~10000 correspond to 0~100%
-        pwmR.config.freq       = 1000;
-        hosal_pwm_init(&pwmR);
-        vTaskDelay(50);
-        hosal_pwm_start(&pwmR);
-    }
-    else
-    {
-        pwmR.config.duty_cycle = level; // duty_cycle range is 0~10000 correspond to 0~100%
-        pwmR.config.freq       = 1000;
-        hosal_pwm_para_chg(&pwmR, pwmR.config);
-    }
-#else
-
-    hosal_pwm_dev_t pwmR, pwmG, pwmB;
-
-    uint32_t level = (red * 10000) / UINT8_MAX;
-    log_info("red level: %d\r\n", level);
-    pwmR.port              = 0;
-    pwmR.config.pin        = 20;
-    pwmR.config.duty_cycle = level; // duty_cycle range is 0~10000 correspond to 0~100%
-    pwmR.config.freq       = 1000;
-    hosal_pwm_init(&pwmR);
-    // vTaskDelay(100);
-
-    level = (green * 10000) / UINT8_MAX;
-    log_info("green level: %d\r\n", level);
-    pwmG.port              = 1;
-    pwmG.config.pin        = 21;
-    pwmG.config.duty_cycle = level; // duty_cycle range is 0~10000 correspond to 0~100%
-    pwmG.config.freq       = 1000;
-    hosal_pwm_init(&pwmG);
-    // vTaskDelay(100);
-
-    level = (blue * 10000) / UINT8_MAX;
-    log_info("blue level: %d\r\n", level);
-    pwmB.port = 2;
-    // not use debug port
-    // pwmB.config.pin        = 17;
-    pwmB.config.duty_cycle = level; // duty_cycle range is 0~10000 correspond to 0~100%
-    pwmB.config.freq       = 1000;
-    hosal_pwm_init(&pwmB);
-    vTaskDelay(50);
-
-    hosal_pwm_start(&pwmG);
-    hosal_pwm_start(&pwmR);
-    hosal_pwm_start(&pwmB);
-#endif
+    BL602_LightState_Update(red,green,blue);
 }
 
 void LEDWidget::Init(uint8_t gpioNum)
@@ -162,7 +99,7 @@ void LEDWidget::Animate()
 
         if (nextChangeTimeMS < nowMS)
         {
-            // DoSet(!mState);
+           // DoSet(!mState);
             mLastChangeTimeMS = nowMS;
         }
     }

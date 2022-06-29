@@ -68,7 +68,9 @@ private:
     static void TimerEventHandler(TimerHandle_t xTimer);
 
     static void UpdateClusterState(void);
-
+    static void FactoryResetButtonEventHandler(void);
+    static void LightingActionButtonEventHandler(void);
+    static void InitButtons(void);
     void StartTimer(uint32_t aTimeoutMs);
 
     enum Function_t
