@@ -53,23 +53,26 @@ void LEDWidget::Init(uint8_t gpioNum)
 
 void LEDWidget::Set(bool state)
 {
-    log_info("state: %d\r\n", state);
+    log_info("Setting state to %d", state ? 1 : 0);
+    if (state == mState)
+        return;
+
+    mState = state;
     mBlinkOnTimeMS = mBlinkOffTimeMS = 0;
-    DoSet(state);
+    DoSet();
 }
 
 void LEDWidget::SetBrightness(uint8_t brightness)
 {
-    uint8_t red, green, blue;
-    log_info("mDefaultOnBrightness: %d, brightness: %d\r\n", mDefaultOnBrightness, brightness);
-    HSB2rgb(mHue, mSaturation, brightness, red, green, blue);
-    log_info("brightness: %d, mHue: %d, mSaturation: %d, red: %d, green: %d, blue: %d\r\n", brightness, mHue, mSaturation, red,
-             green, blue);
-    showRGB(red, green, blue);
-
-    if (brightness > 0)
+    if(brightness>1)
     {
-        mDefaultOnBrightness = brightness;
+        uint8_t red, green, blue;
+        log_info("mDefaultOnBrightness: %d, brightness: %d\r\n", mDefaultOnBrightness, brightness);
+        HSB2rgb(mHue, mSaturation, brightness, red, green, blue);
+        log_info("brightness: %d, mHue: %d, mSaturation: %d, red: %d, green: %d, blue: %d\r\n", brightness, mHue, mSaturation, red,
+                green, blue);
+        showRGB(red, green, blue);
+        mDefaultOnBrightness=brightness;
     }
 }
 
@@ -105,20 +108,33 @@ void LEDWidget::Animate()
     }
 }
 
-void LEDWidget::DoSet(bool state)
+void LEDWidget::DoSet()
 {
-    bool stateChange = (mState != state);
-    mState           = state;
-
     uint8_t red, green, blue;
-    uint8_t brightness = state ? mDefaultOnBrightness : 0;
-    log_info("state: %d, mDefaultOnBrightness: %d, brightness: %d\r\n", state, mDefaultOnBrightness, brightness);
+    uint8_t brightness = mState ? mDefaultOnBrightness : 0;
+    log_info("state: %d, mDefaultOnBrightness: %d, brightness: %d\r\n",mState, mDefaultOnBrightness, brightness);
     HSB2rgb(mHue, mSaturation, brightness, red, green, blue);
     log_info("brightness: %d, mHue: %d, mSaturation: %d, red: %d, green: %d, blue: %d\r\n", brightness, mHue, mSaturation, red,
              green, blue);
     showRGB(red, green, blue);
 }
 
+void LEDWidget::Toggle()
+{
+    log_info("Toggling state to %d", !mState);
+    mState = !mState;
+
+    DoSet();
+}
+uint8_t LEDWidget::GetLevel()
+{
+    return this->mDefaultOnBrightness;
+}
+
+bool LEDWidget::IsTurnedOn()
+{
+    return this->mState;
+}
 void LEDWidget::SetColor(uint8_t Hue, uint8_t Saturation)
 {
     uint8_t red, green, blue;
