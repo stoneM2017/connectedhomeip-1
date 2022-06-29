@@ -35,7 +35,7 @@
 
 #include <lib/support/ErrorStr.h>
 
-#if CONFIG_ENABLE_PW_RPC
+#if PW_RPC_ENABLED
 #include "PigweedLogger.h"
 #include "Rpc.h"
 #endif
@@ -73,7 +73,7 @@ extern "C" int main()
 {
     InitPlatform();
 
-#if CONFIG_ENABLE_PW_RPC
+#if PW_RPC_ENABLED
     chip::rpc::Init();
 #endif
 
