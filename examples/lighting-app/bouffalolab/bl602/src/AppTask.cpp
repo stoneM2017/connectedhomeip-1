@@ -359,9 +359,14 @@ void AppTask::FunctionHandler(AppEvent * aEvent)
     if (aEvent->ButtonEvent.Action == APP_BUTTON_LONGPRESSED)
     {
         log_info("will reset! please release boutton\r\n");
+        statusLED.Toggle();
+        vTaskDelay(1000);
+        statusLED.Toggle();
+        vTaskDelay(1000);
+        statusLED.Toggle();
         ef_port_erase_all();
-        vTaskDelay(2000);
-        hal_reboot();
+        vTaskDelay(3000);
+        chip::Server::GetInstance().ScheduleFactoryReset();
 
     }
     else if(aEvent->ButtonEvent.Action == APP_BUTTON_PRESSED)
@@ -507,7 +512,6 @@ void AppTask::UpdateClusterState(void)
 {
     uint8_t newValue = LightMgr().IsLightOn();
     log_info("updating on/off = %x\r\n",newValue);
-    // write the new on/off value
     EmberAfStatus status =
         emberAfWriteAttribute(1, ZCL_ON_OFF_CLUSTER_ID, ZCL_ON_OFF_ATTRIBUTE_ID, (uint8_t *) &newValue, ZCL_BOOLEAN_ATTRIBUTE_TYPE);
     if (status != EMBER_ZCL_STATUS_SUCCESS)
