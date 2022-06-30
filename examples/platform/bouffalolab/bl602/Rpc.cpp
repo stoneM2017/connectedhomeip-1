@@ -96,8 +96,21 @@ class BL602Device final : public Device
 public:
     pw::Status Reboot(const pw_protobuf_Empty & request, pw_protobuf_Empty & response) override
     {
-        mRebootTimer = xTimerCreateStatic("Reboot", kRebootTimerPeriodTicks, false, nullptr, RebootHandler, &mRebootTimerBuffer);
-        xTimerStart(mRebootTimer, 0);
+        if(!mRebootTimer)
+        {
+            mRebootTimer = xTimerCreateStatic("Reboot", kRebootTimerPeriodTicks, false, nullptr, RebootHandler, &mRebootTimerBuffer);
+            xTimerStart(mRebootTimer, 0);
+        }
+        return pw::OkStatus();
+    }
+
+    pw::Status FactoryReset(const pw_protobuf_Empty & request, pw_protobuf_Empty & response) override
+    {
+        if(!mRebootTimer)
+        {
+            mRebootTimer = xTimerCreateStatic("FactoryReset", kRebootTimerPeriodTicks, false, nullptr, FactoryResetHandler, &mRebootTimerBuffer);
+            xTimerStart(mRebootTimer, 0);
+        }
         return pw::OkStatus();
     }
 
@@ -107,12 +120,14 @@ private:
     StaticTimer_t mRebootTimerBuffer;
 
     static void RebootHandler(TimerHandle_t) { bl_sys_reset_system(); }
+
+    static void FactoryResetHandler(TimerHandle_t) { DeviceLayer::ConfigurationMgr().InitiateFactoryReset(); }
 };
 #endif // defined(PW_RPC_DEVICE_SERVICE) && PW_RPC_DEVICE_SERVICE
 
 namespace {
 
-#define RPC_TASK_STACK_SIZE 4096
+#define RPC_TASK_STACK_SIZE 1536
 #define RPC_TASK_PRIORITY 1
 static TaskHandle_t sRpcTaskHandle;
 StaticTask_t sRpcTaskBuffer;
@@ -203,10 +218,6 @@ void RunRpcService(void *)
 
 void Init()
 {
-    pw_sys_io_Init();
-
-    PigweedLogger::init();
-
     // Start App task.
     sRpcTaskHandle = xTaskCreateStatic(RunRpcService, "RPC_TASK", ArraySize(sRpcTaskStack), nullptr, RPC_TASK_PRIORITY,
                                        sRpcTaskStack, &sRpcTaskBuffer);

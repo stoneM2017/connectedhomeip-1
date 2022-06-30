@@ -29,6 +29,7 @@
 #include "semphr.h"
 #include <pw_hdlc/encoder.h>
 #include <pw_stream/sys_io_stream.h>
+#include "pw_sys_io_bl602/init.h"
 
 #include <cassert>
 #include <cstdint>
@@ -61,6 +62,8 @@ void init(void)
 {
     sLoggerLock = xSemaphoreCreateMutex();
     assert(sLoggerLock != NULL);
+
+    pw_sys_io_Init();
 }
 
 int putString(const char * buffer, size_t size)

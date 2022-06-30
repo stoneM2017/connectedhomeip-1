@@ -94,11 +94,17 @@ static int uartRxCallback(void * p_arg)
     uint8_t data_buf[32];
 
     int ret = hosal_uart_receive(&uart_stdio, data_buf, sizeof(data_buf));
-    hosal_uart_send(&uart_stdio, data_buf, ret);
     if (ret)
     {
         writeToFifo(data_buf, ret);
     }
+
+    return 0;
+}
+
+static int uartTxCallback(void * p_arg)
+{
+    hosal_uart_ioctl(&uart_stdio, HOSAL_UART_TX_TRIGGER_OFF, NULL);
 
     return 0;
 }
@@ -109,8 +115,9 @@ void uartConsoleInit(void)
 
     hosal_uart_finalize(&uart_stdio);
     hosal_uart_init(&uart_stdio);
-    hosal_uart_ioctl(&uart_stdio, HOSAL_UART_MODE_SET, (void *) HOSAL_UART_MODE_INT);
     hosal_uart_callback_set(&uart_stdio, HOSAL_UART_RX_CALLBACK, uartRxCallback, NULL);
+    hosal_uart_callback_set(&uart_stdio, HOSAL_UART_TX_CALLBACK, uartTxCallback, NULL);
+    hosal_uart_ioctl(&uart_stdio, HOSAL_UART_MODE_SET, (void *) HOSAL_UART_MODE_INT);
 }
 
 int16_t uartConsoleWrite(const char * Buf, uint16_t BufLength)

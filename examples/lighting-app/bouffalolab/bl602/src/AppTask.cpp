@@ -45,6 +45,12 @@
 #include <bl_sys_ota.h>
 #include <lib/support/ErrorStr.h>
 #include <InitPlatform.h>
+
+#if PW_RPC_ENABLED
+#include "PigweedLogger.h"
+#include "Rpc.h"
+#endif
+
 #define FACTORY_RESET_TRIGGER_TIMEOUT 3000
 #define FACTORY_RESET_CANCEL_WINDOW_TIMEOUT 3000
 #define APP_EVENT_QUEUE_SIZE 10
@@ -144,6 +150,11 @@ CHIP_ERROR AppTask::Init()
 
     PrintOnboardingCodes(chip::RendezvousInformationFlag(chip::RendezvousInformationFlag::kBLE));
     InitButtons();
+
+#if PW_RPC_ENABLED
+    chip::rpc::Init();
+#endif
+
     return err;
 }
 

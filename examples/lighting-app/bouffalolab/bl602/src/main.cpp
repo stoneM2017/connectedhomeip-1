@@ -74,7 +74,7 @@ extern "C" int main()
     InitPlatform();
 
 #if PW_RPC_ENABLED
-    chip::rpc::Init();
+    PigweedLogger::init();
 #endif
 
     log_info("==================================================\r\n");
