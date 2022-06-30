@@ -45,9 +45,6 @@
 #include <bl_sys_ota.h>
 #include <lib/support/ErrorStr.h>
 #include <InitPlatform.h>
-#include <easyflash.h>
-#include <hal_sys.h>
-
 #define FACTORY_RESET_TRIGGER_TIMEOUT 3000
 #define FACTORY_RESET_CANCEL_WINDOW_TIMEOUT 3000
 #define APP_EVENT_QUEUE_SIZE 10
@@ -358,13 +355,12 @@ void AppTask::FunctionHandler(AppEvent * aEvent)
 
     if (aEvent->ButtonEvent.Action == APP_BUTTON_LONGPRESSED)
     {
-        log_info("will reset! please release boutton\r\n");
+        log_info("FactoryReset! please release boutton!!!\r\n");
         statusLED.Toggle();
         vTaskDelay(1000);
         statusLED.Toggle();
         vTaskDelay(1000);
         statusLED.Toggle();
-        ef_port_erase_all();
         vTaskDelay(3000);
         chip::Server::GetInstance().ScheduleFactoryReset();
 
