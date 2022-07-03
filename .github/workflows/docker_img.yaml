@@ -65,7 +65,7 @@ jobs:
             - name: Build All images using project bash script
               run: |
                   cd integrations/docker/images/chip-build${{ matrix.img }}
-                  ./build.sh --latest --push
+                  ./build.sh --latest
             - name: Scan for vulnerabilities
               uses: crazy-max/docker-scan-action@master
               with:
