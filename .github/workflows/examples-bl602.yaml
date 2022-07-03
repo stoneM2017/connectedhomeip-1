@@ -54,14 +54,14 @@ jobs:
         run: scripts/tools/memory/gh_sizes_environment.py "${GH_CONTEXT}"
 
       - name: Build example BL602 Lighting App
-        timeout-minutes: 10
+        timeout-minutes: 30
         run: |
           scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602_light
           .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py bl602 bl602 lighting-app \
             out/bl602_light/chip-bl602-lighting-example.bin /tmp/bloat_reports/
 
       - name: Build example BL602 Lighting App with RPCs
-        timeout-minutes: 10
+        timeout-minutes: 30
         run: |
           scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602_light_rpc 'import("//with_pw_rpc.gni")'
           .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py bl602 bl602+rpc lighting-app \
