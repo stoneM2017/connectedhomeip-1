@@ -56,16 +56,16 @@ jobs:
       - name: Build example BL602 Lighting App
         timeout-minutes: 30
         run: |
-          scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602_light
+          scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602-light
           .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py bl602 bl602 lighting-app \
-            out/bl602_light/chip-bl602-lighting-example.bin /tmp/bloat_reports/
+            out/bl602-light/chip-bl602-lighting-example.out /tmp/bloat_reports/
 
       - name: Build example BL602 Lighting App with RPCs
         timeout-minutes: 30
         run: |
-          scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602_light_rpc 'import("//with_pw_rpc.gni")'
+          scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602-light-rpc 'import("//with_pw_rpc.gni")'
           .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py bl602 bl602+rpc lighting-app \
-            out/bl602_light_rpc/chip-bl602-lighting-example.bin /tmp/bloat_reports/
+            out/bl602-light-rpc/chip-bl602-lighting-example.out /tmp/bloat_reports/
 
       - name: Uploading Size Reports
         uses: actions/upload-artifact@v2
