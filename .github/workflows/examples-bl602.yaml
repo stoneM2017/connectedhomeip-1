@@ -53,10 +53,14 @@ jobs:
           GH_CONTEXT: ${{ toJson(github) }}
         run: scripts/tools/memory/gh_sizes_environment.py "${GH_CONTEXT}"
 
+      - name: Bootstrap
+        timeout-minutes: 20
+        run: scripts/build/gn_bootstrap.sh
+
       - name: Build example BL602 Lighting App
         timeout-minutes: 30
         run: |
-          scripts/examples/gn_bl602_example.sh lighting-app ./out/bl602-light
+          scripts/build/build_examples.py --target bl602-light build
           .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py bl602 bl602 lighting-app \
             out/bl602-light/chip-bl602-lighting-example.out /tmp/bloat_reports/
 
