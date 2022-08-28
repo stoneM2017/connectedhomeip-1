@@ -77,14 +77,14 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetCurrentHeapFree(uint64_t & currentHeap
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetCurrentHeapUsed(uint64_t & currentHeapUsed)
 {
-    currentHeapUsed = _heap_size - xPortGetFreeHeapSize();
+    currentHeapUsed = (uint32_t) &_heap_size - xPortGetFreeHeapSize();
 
     return CHIP_NO_ERROR;
 }
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetCurrentHeapHighWatermark(uint64_t & currentHeapHighWatermark)
 {
-    currentHeapHighWatermark = _heap_size - xPortGetMinimumEverFreeHeapSize();
+    currentHeapHighWatermark = (uint32_t) &_heap_size - xPortGetMinimumEverFreeHeapSize();
 
     return CHIP_NO_ERROR;
 }
@@ -249,8 +249,7 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiBeaconLostCount(uint32_t & beaconL
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiCurrentMaxRate(uint64_t & currentMaxRate)
 {
-    currentMaxRate = 0;
-    return CHIP_NO_ERROR;
+    return CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE;
 }
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiPacketMulticastRxCount(uint32_t & packetMulticastRxCount)
@@ -291,7 +290,7 @@ CHIP_ERROR DiagnosticDataProviderImpl::ResetWiFiNetworkDiagnosticsCounts()
 CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiBeaconRxCount(uint32_t & beaconRxCount)
 {
     beaconRxCount = wifi_mgmr_beacon_recv_cnt();
-    return CHIP_NO_ERROR;
+   return CHIP_NO_ERROR;
 }
 
 } // namespace DeviceLayer
