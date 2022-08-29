@@ -200,8 +200,8 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetNetworkInterfaces(NetworkInterface ** 
         ifp->type                                          = EMBER_ZCL_INTERFACE_TYPE_WI_FI;
         ifp->offPremiseServicesReachableIPv4.SetNull();
         ifp->offPremiseServicesReachableIPv6.SetNull();
-        bl_efuse_read_mac(mac_addr);
-        memcpy(ifp->MacAddress, mac_addr, sizeof(mac_addr));
+        bl_efuse_read_mac(ifp->MacAddress);
+        ifp->hardwareAddress = ByteSpan(ifp->MacAddress, 6);
 
         wifi_mgmr_sta_ip_get(&ip, &gw, &mask);
         memcpy(ifp->Ipv4AddressesBuffer[0], &ip, kMaxIPv4AddrSize);
