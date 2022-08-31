@@ -279,6 +279,7 @@ void BLWiFiDriver::OnScanWiFiNetworkDone()
                 }
             }))
         {
+            vPortFree(ScanResult);
             ChipLogProgress(DeviceLayer, "ScheduleLambda OK");
         }
     }
