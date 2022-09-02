@@ -47,7 +47,7 @@ extern "C" {
 #include <hosal_pwm.h>
 #include <wifi_mgmr_ext.h>
 
-#define IOT_DVK_3S 1
+#define IOT_DVK_3S 0
 
 #if BOARD_ID == IOT_DVK_3S
 hosal_pwm_dev_t pwmR = { .port = 0xff };
