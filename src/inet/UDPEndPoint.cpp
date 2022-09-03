@@ -114,6 +114,10 @@ CHIP_ERROR UDPEndPoint::SendMsg(const IPPacketInfo * pktInfo, System::PacketBuff
     INET_FAULT_INJECT(FaultInjection::kFault_Send, return INET_ERROR_UNKNOWN_INTERFACE;);
     INET_FAULT_INJECT(FaultInjection::kFault_SendNonCritical, return CHIP_ERROR_NO_MEMORY;);
 
+    if (msg.IsNull()) {
+        return CHIP_ERROR_NO_MEMORY;
+    }
+
     ReturnErrorOnFailure(SendMsgImpl(pktInfo, std::move(msg)));
 
     CHIP_SYSTEM_FAULT_INJECT_ASYNC_EVENT();
