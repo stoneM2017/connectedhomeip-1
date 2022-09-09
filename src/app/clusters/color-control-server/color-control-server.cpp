@@ -1035,6 +1035,8 @@ bool ColorControlServer::moveToHueAndSaturationCommand(EndpointId endpoint, uint
     if (isEnhanced)
     {
         Attributes::EnhancedCurrentHue::Get(endpoint, &currentHue);
+        Attributes::ColorMode::Set(endpoint, CurrentHueandCurrentSaturation);
+        Attributes::EnhancedColorMode::Set(endpoint, EnhancedCurrentHueandCurrentSaturation);
     }
     else
     {
