@@ -60,6 +60,7 @@ template("bl602_sdk") {
       "${bl602_sdk_root}/components/network/lwip/src/include/lwip/apps",
       "${bl602_sdk_root}/components/network/lwip/lwip-port",
       "${bl602_sdk_root}/components/network/lwip/lwip-port/FreeRTOS",
+      "${bl602_sdk_root}/components/network/lwip/lwip-port/hook",
       "${bl602_sdk_root}/components/network/lwip_mdns",
 
       #      "${bl602_sdk_root}/components/network/lwip_dhcpd",
@@ -215,6 +216,10 @@ template("bl602_sdk") {
       "CONF_ENABLE_FRAME_PTR=1",
       "CONF_ENABLE_FUNC_BACKTRACE_ELF=connectedhomeip/examples/lock-app/bl602/out/debug/chip-bl602-lock-example.out",
       "CHIP_SYSTEM_CRYPTO_HEADER_RESERVE_SIZE=128",
+
+      "CONFIG_ENABLE_IPV6_ADDR_CALLBACK",
+      "CONFIG_LWIP_HOOK_IP6_ROUTE_DEFAULT",
+      "CONFIG_LWIP_HOOK_ND6_GET_GW_DEFAULT",
     ]
 
     if (bl602_board == "BL-HWC-G1") {
